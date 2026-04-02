@@ -22,6 +22,7 @@ const MainLayout = ({ currentRole, userName = "Guest" }: MainLayoutProps) => {
       return [
         { path: "/manager", label: "📋 Manager Dashboard" },
         { path: "/manager/matches", label: "⚽ Fixtures & Results" },
+        { path: "/manager/standings", label: "🏆 League Table" },
         { path: "/manager/stats", label: "📊 Squad Stats" },
         { path: "/manager/team", label: "⚙️ Squad Management" },
       ];

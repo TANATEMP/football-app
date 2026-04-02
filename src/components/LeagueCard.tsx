@@ -1,4 +1,3 @@
-// src/components/admin/LeagueCard.tsx
 import React from 'react';
 import { Link } from 'react-router-dom';
 import type { League } from '../types';
@@ -24,10 +23,6 @@ const LeagueCard = ({ league }: LeagueCardProps) => {
       <div className="p-5 border-b border-gray-100 flex justify-between items-start">
         <div>
           <h3 className="text-xl font-bold text-gray-800">{league.name}</h3>
-          <p className="text-sm text-gray-500 mt-1">Season: {league.season}</p>
-          {league.description && (
-            <p className="text-xs text-gray-400 mt-2 line-clamp-2 italic">{league.description}</p>
-          )}
         </div>
         <span className={`text-xs font-bold px-3 py-1 rounded-full border ${getStatusColor(league.status)}`}>
           {league.status}

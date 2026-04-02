@@ -11,19 +11,37 @@ interface User {
   joinedDate?: string;
 }
 
+// กำหนด Interface สำหรับ Modal
+interface ModalConfig {
+  isOpen: boolean;
+  type: "confirm" | "error";
+  title: string;
+  message: string;
+  onConfirm?: () => void;
+}
+
 const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // 🔵 State สำหรับจัดการ ConfirmModal
+  const [modal, setModal] = useState<ModalConfig>({
+    isOpen: false,
+    type: "confirm",
+    title: "",
+    message: "",
+  });
+
+  // ฟังก์ชันปิด Modal
+  const closeModal = () => setModal((prev) => ({ ...prev, isOpen: false }));
+
   // 🔵 1. ฟังก์ชันดึงข้อมูลจาก API
   const fetchUsers = useCallback(async () => {
     try {
       setIsLoading(true);
-      // ใช้ shared api instance — token ถูกแนบอัตโนมัติ
       const response = await api.get("/user/list");
-      // Backend wraps: { success, data: [...], meta }
       const payload = response.data.data;
       setUsers(Array.isArray(payload) ? payload : []);
       setError(null);
@@ -33,7 +51,7 @@ const UserManagement: React.FC = () => {
           setError("ไม่พบ Token กรุณาเข้าสู่ระบบใหม่");
         } else {
           setError(
-            err.response?.data?.message || "ไม่สามารถโหลดข้อมูลผู้ใช้งานได้",
+            err.response?.data?.message || "ไม่สามารถโหลดข้อมูลผู้ใช้งานได้"
           );
         }
       } else {
@@ -56,43 +74,64 @@ const UserManagement: React.FC = () => {
 
       // Optimistic UI Update
       setUsers((prev) =>
-        prev.map((u) => (u.id === id ? { ...u, status: newStatus as "ACTIVE" | "BANNED" } : u)),
+        prev.map((u) =>
+          u.id === id ? { ...u, status: newStatus as "ACTIVE" | "BANNED" } : u
+        )
       );
 
-      // ใช้ shared api — token แนบอัตโนมัติ
       await api.patch(`/user/${id}/status`, { status: newStatus });
     } catch (err) {
       // Revert on failure
       fetchUsers();
       if (axios.isAxiosError(err)) {
-        alert(err.response?.data?.message || "ไม่สามารถอัปเดตสถานะได้");
+        setModal({
+          isOpen: true,
+          type: "error",
+          title: "เกิดข้อผิดพลาด",
+          message: err.response?.data?.message || "ไม่สามารถอัปเดตสถานะได้",
+        });
       }
       console.error(err);
     }
   };
 
-  // กรองข้อมูล (Client-side search)
+  // 🔵 3. ฟังก์ชันดักก่อนกดสลับสถานะ (เปิด Modal ยืนยัน)
+  const handleToggleClick = (user: User) => {
+    const isBanning = user.status === "ACTIVE";
+    setModal({
+      isOpen: true,
+      type: "confirm",
+      title: isBanning ? "ยืนยันการระงับผู้ใช้" : "ยืนยันการปลดระงับผู้ใช้",
+      message: `คุณแน่ใจหรือไม่ว่าต้องการ${
+        isBanning ? "ระงับ" : "ปลดระงับ"
+      }ผู้ใช้ "${user.name}"?`,
+      onConfirm: () => {
+        closeModal();
+        toggleStatus(user.id, user.status);
+      },
+    });
+  };
+
+  // กรองข้อมูล
   const filteredUsers = users.filter(
     (u) =>
       u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchTerm.toLowerCase()),
+      u.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">User Management</h1>
-          <p className="text-slate-500">
-            จัดการผู้ใช้งานในระบบ
-          </p>
+          <p className="text-slate-500">จัดการผู้ใช้งานในระบบ</p>
         </div>
 
         <div className="relative">
           <input
             type="text"
             placeholder="ค้นหาชื่อหรืออีเมล..."
-            className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg w-full md:w-64 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+            className="pl-4 pr-4 py-2 border border-gray-200 rounded-lg w-full md:w-64 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -161,8 +200,8 @@ const UserManagement: React.FC = () => {
                           user.role === "ADMIN"
                             ? "bg-purple-100 text-purple-700"
                             : user.role === "MANAGER"
-                              ? "bg-green-100 text-green-700"
-                              : "bg-blue-100 text-blue-700"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-blue-100 text-blue-700"
                         }`}
                       >
                         {user.role}
@@ -171,10 +210,18 @@ const UserManagement: React.FC = () => {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-1.5">
                         <div
-                          className={`w-2 h-2 rounded-full ${user.status === "ACTIVE" ? "bg-green-500" : "bg-red-500"}`}
+                          className={`w-2 h-2 rounded-full ${
+                            user.status === "ACTIVE"
+                              ? "bg-green-500"
+                              : "bg-red-500"
+                          }`}
                         ></div>
                         <span
-                          className={`text-sm font-medium ${user.status === "ACTIVE" ? "text-green-700" : "text-red-700"}`}
+                          className={`text-sm font-medium ${
+                            user.status === "ACTIVE"
+                              ? "text-green-700"
+                              : "text-red-700"
+                          }`}
                         >
                           {user.status}
                         </span>
@@ -182,14 +229,15 @@ const UserManagement: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <button
-                        onClick={() => toggleStatus(user.id, user.status)}
+                        // เปลี่ยนไปเรียกใช้ handleToggleClick แทน
+                        onClick={() => handleToggleClick(user)}
                         disabled={user.role === "ADMIN"}
                         className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition-all ${
                           user.role === "ADMIN"
                             ? "bg-gray-100 text-gray-400 border-gray-100 cursor-not-allowed"
                             : user.status === "ACTIVE"
-                              ? "text-red-600 border-red-100 hover:bg-red-50"
-                              : "text-green-600 border-green-100 hover:bg-green-50"
+                            ? "text-red-600 border-red-100 hover:bg-red-50"
+                            : "text-green-600 border-green-100 hover:bg-green-50"
                         }`}
                       >
                         {user.status === "ACTIVE" ? "Ban User" : "Unban"}
@@ -206,6 +254,40 @@ const UserManagement: React.FC = () => {
               ไม่พบข้อมูลผู้ใช้งานที่ค้นหา
             </div>
           )}
+        </div>
+      )}
+
+      {/* 🔵 ตัว UI ของ ConfirmModal */}
+      {modal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl animate-in fade-in zoom-in-95 duration-200">
+            <h3 className={`text-lg font-bold mb-2 ${modal.type === "error" ? "text-red-600" : "text-slate-800"}`}>
+              {modal.title}
+            </h3>
+            <p className="text-slate-600 text-sm mb-6">
+              {modal.message}
+            </p>
+            <div className="flex justify-end gap-3">
+              {modal.type === "confirm" && (
+                <button
+                  onClick={closeModal}
+                  className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                >
+                  ยกเลิก
+                </button>
+              )}
+              <button
+                onClick={modal.type === "confirm" ? modal.onConfirm : closeModal}
+                className={`px-4 py-2 text-sm font-bold text-white rounded-lg transition-colors ${
+                  modal.type === "error" 
+                    ? "bg-red-600 hover:bg-red-700" 
+                    : "bg-blue-600 hover:bg-blue-700"
+                }`}
+              >
+                {modal.type === "error" ? "ตกลง" : "ยืนยัน"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

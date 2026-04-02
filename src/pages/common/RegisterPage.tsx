@@ -1,7 +1,8 @@
 // src/pages/common/RegisterPage.tsx
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import type { UserRole } from '../../types'; // ปรับ path ให้ตรงกับของคุณนะครับ
+import type { UserRole } from '../../types';
+import ConfirmModal from '../../components/ConfirmModal'; // 🔵 ปรับ path ให้ตรงกับตำแหน่งไฟล์ ConfirmModal ของคุณ
 
 interface RegisterPageProps {
   setCurrentRole: (role: UserRole) => void;
@@ -20,11 +21,29 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ setCurrentRole }) => {
     password: '',
   });
 
+  // 🔵 State สำหรับจัดการ ConfirmModal
+  const [modal, setModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'INFO' as 'INFO' | 'SUCCESS' | 'DANGER',
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // จำลองการสมัครเสร็จสิ้น และล็อกอินให้เลย
-    alert(`สมัครสมาชิกสำเร็จในฐานะ ${role}!\nกำลังพาคุณไปที่หน้า Dashboard`);
+    // 🔵 เปิด ConfirmModal แจ้งเตือนความสำเร็จ
+    setModal({
+      isOpen: true,
+      title: 'สมัครสมาชิกสำเร็จ!',
+      message: `สร้างบัญชีในฐานะ ${role} เรียบร้อยแล้ว\nระบบกำลังพาคุณไปที่หน้า Dashboard`,
+      type: 'SUCCESS',
+    });
+  };
+
+  // 🔵 ฟังก์ชันเมื่อกดปุ่ม "ตกลง/Confirm" ใน Modal
+  const handleConfirmSuccess = () => {
+    setModal({ ...modal, isOpen: false });
     
     // เซ็ต Role ไปที่ App.tsx เพื่อให้ผ่าน ProtectedRoute
     setCurrentRole(role as UserRole);
@@ -34,8 +53,13 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ setCurrentRole }) => {
     if (role === 'PLAYER') navigate('/player');
   };
 
+  // 🔵 ฟังก์ชันเมื่อกดปุ่ม "ยกเลิก/Cancel" ใน Modal
+  const handleCancelModal = () => {
+    setModal({ ...modal, isOpen: false });
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center p-4 font-sans text-slate-900">
+    <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center p-4 font-sans text-slate-900 relative">
       
       <Link to="/" className="flex items-center gap-2 font-black text-2xl tracking-tighter mb-8 hover:opacity-80 transition-opacity">
         <span className="text-3xl">⚽</span>
@@ -119,6 +143,17 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ setCurrentRole }) => {
           มีบัญชีอยู่แล้วใช่ไหม? <Link to="/login" className="text-blue-600 font-bold hover:underline">เข้าสู่ระบบที่นี่</Link>
         </p>
       </div>
+
+      {/* 🔵 เรียกใช้งาน ConfirmModal */}
+      <ConfirmModal
+        isOpen={modal.isOpen}
+        title={modal.title}
+        message={modal.message}
+        type={modal.type}
+        confirmText="เข้าสู่ระบบ"
+        onConfirm={handleConfirmSuccess}
+        onCancel={handleCancelModal}
+      />
     </div>
   );
 };

@@ -17,8 +17,7 @@ const MatchCenter = () => {
       const user = userRes.data.data || userRes.data;
       setUserRole(user.role);
 
-      // 🎯 Determine the team based on the user role
-      // Players find their team via the player profile, Managers find it directly.
+      // 🎯 Determine the team based on the user role (Data structure still depends on role)
       const team = user.role === "PLAYER" ? user.player?.team : user.team;
       setMyTeam(team);
 
@@ -69,12 +68,9 @@ const MatchCenter = () => {
   // ✅ Results: เอาทั้งหมดที่เคยเตะมา (Historical Career History)
   const results = sortedMatches.filter((m) => m.status === "COMPLETED").reverse();
 
-  const isPlayer = userRole === "PLAYER";
-  
-  // Choose accent color based on role (optional, for flavor)
-  // Player: Indigo/Orange accents, Manager: Blue accents
-  const accentColor = isPlayer ? "indigo" : "blue";
-  const upcomingAccent = isPlayer ? "orange" : "blue";
+  // 🎨 Unified Theme Colors (ใช้เหมือนกันทั้ง Player และ Manager)
+  const accentColor = "indigo";
+  const upcomingAccent = "orange";
 
   const noLeague = !myTeam?.leagueId || !myTeam?.league || myTeam?.league?.status === 'COMPLETED';
 
@@ -82,7 +78,7 @@ const MatchCenter = () => {
     <div className="max-w-7xl mx-auto space-y-10 animate-fade-in pb-20">
       {/* Header - Shared Premium Design */}
       <div className="bg-slate-900 rounded-[2.5rem] p-10 text-white shadow-2xl relative overflow-hidden border border-white/5">
-        <h1 className={`text-4xl font-black italic uppercase tracking-tighter relative z-10 ${isPlayer ? 'text-white' : 'text-blue-400'}`}>
+        <h1 className="text-4xl font-black italic uppercase tracking-tighter relative z-10 text-white">
           Match Center ⚽
         </h1>
         <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] mt-2 relative z-10">
@@ -95,16 +91,16 @@ const MatchCenter = () => {
         {/* Upcoming Fixtures Column */}
         <div className="space-y-6">
           <h3 className={`text-[10px] font-black text-slate-400 uppercase tracking-widest border-l-2 border-${upcomingAccent}-500 pl-3`}>
-            Upcoming Battles
+            Upcoming Matches
           </h3>
           {noLeague ? (
             <div className="bg-white rounded-[3rem] p-12 text-center shadow-sm border border-slate-100">
               <div className="text-4xl mb-4 grayscale opacity-20">🏟️</div>
-              <h2 className="text-lg font-black italic uppercase text-slate-900 mb-2">ยังไม่มีรายการแข่งขัน</h2>
+              <h2 className="text-lg font-black italic uppercase text-slate-900 mb-2">No Fixtures Yet</h2>
               <p className="text-slate-400 font-black italic uppercase text-[9px] tracking-widest">
                 {!myTeam?.leagueId 
-                  ? "ทีมของคุณกำลังรอเข้าร่วมลีกใหม่ในฤดูกาลถัดไป" 
-                  : "ฤดูกาลแข่งขันจบลงแล้ว หรือยังไม่มีการจัดตารางแข่งในขณะนี้"}
+                  ? "Your team is waiting to join a new league" 
+                  : "The season has ended or no match schedule has been arranged at this time"}
               </p>
             </div>
           ) : fixtures.length > 0 ? (
@@ -112,8 +108,10 @@ const MatchCenter = () => {
               const isMyTeamHome = match.homeTeamId === myTeam?.id;
               return (
                 <div key={match.id} className={`bg-white rounded-3xl p-8 shadow-sm border border-slate-100 group hover:shadow-xl hover:border-${upcomingAccent}-100 transition-all duration-500`}>
-                  <div className="text-[8px] font-black uppercase tracking-widest text-slate-300 mb-6 text-center">
-                    {match.league?.name}
+                  <div className="text-center mb-6">
+                    <div className={`inline-block bg-${upcomingAccent}-50 border border-${upcomingAccent}-100 text-${upcomingAccent}-600 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm`}>
+                      {match.league?.name}
+                    </div>
                   </div>
                   
                   <div className="flex items-center justify-between">
@@ -134,11 +132,16 @@ const MatchCenter = () => {
                     </div>
                     
                     {/* Versus / Meta */}
-                    <div className="px-6 text-center">
-                      <div className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-300 mb-2">
-                        {new Date(match.matchDate).toLocaleDateString()}
+                    <div className="px-4 text-center">
+                      <div className="mb-3">
+                        <div className="text-xs md:text-sm font-black uppercase text-slate-800 bg-slate-100 px-3 py-1 rounded-lg whitespace-nowrap">
+                          {new Date(match.matchDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </div>
+                        <div className="text-[11px] font-bold text-slate-500 mt-1 whitespace-nowrap">
+                          {new Date(match.matchDate).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
+                        </div>
                       </div>
-                      <div className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-black uppercase italic tracking-widest shadow-lg">VS</div>
+                      <div className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-black uppercase italic tracking-widest shadow-lg inline-block">VS</div>
                     </div>
 
                     {/* Away Team */}
@@ -170,8 +173,8 @@ const MatchCenter = () => {
 
         {/* Past Results Column */}
         <div className="space-y-6">
-          <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-l-2 border-indigo-500 pl-3">
-            Historical Logs
+          <h3 className={`text-[10px] font-black text-slate-400 uppercase tracking-widest border-l-2 border-${accentColor}-500 pl-3`}>
+            Matches History
           </h3>
           <div className="space-y-3">
             {results.length > 0 ? (
@@ -207,12 +210,12 @@ const MatchCenter = () => {
                         </div>
                       </div>
                       
-                      <div className="hidden sm:flex flex-col items-end gap-0.5 shrink-0 ml-4">
-                        <div className="text-[7px] font-black uppercase tracking-widest text-slate-300 truncate max-w-[80px]">
+                      <div className="hidden sm:flex flex-col items-end gap-1 shrink-0 ml-4">
+                        <div className={`text-[9px] font-black uppercase tracking-widest text-${accentColor}-600 bg-${accentColor}-50 border border-${accentColor}-100 px-2 py-0.5 rounded truncate max-w-[120px]`}>
                           {match.league?.name}
                         </div>
-                        <div className="text-[8px] font-bold text-slate-400 opacity-60">
-                          {new Date(match.matchDate).toLocaleDateString()}
+                        <div className="text-[10px] font-bold text-slate-500">
+                          {new Date(match.matchDate).toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: '2-digit' })}
                         </div>
                       </div>
                     </div>

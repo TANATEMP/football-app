@@ -30,7 +30,7 @@ import MatchCenter from "./pages/shared/MatchCenter";
 
 // // -- Player --
 import PlayerDashboard from "./pages/player/PlayerDashboard";
-import PlayerStandings from "./pages/player/PlayerStandings";
+import StandingsPage from "./pages/shared/StandingsPage";
 import PlayerRoster from "./pages/player/PlayerRoster";
 import PlayerStats from "./pages/player/PlayerStats";
 
@@ -103,6 +103,7 @@ function App() {
             <Route path="/manager/matches" element={<MatchCenter />} />
             <Route path="/manager/team" element={<TeamManagement />} />
             <Route path="/manager/stats" element={<SquadStats />} />
+            <Route path="/manager/standings" element={<StandingsPage />} />
             <Route path="/manager/leagues" element={<LeagueDiscovery />} />
           </Route>
 
@@ -117,7 +118,7 @@ function App() {
           >
             <Route path="/player" element={<PlayerDashboard />} />
             <Route path="/player/matches" element={<MatchCenter />} />
-            <Route path="/player/standings" element={<PlayerStandings />} />
+            <Route path="/player/standings" element={<StandingsPage />} />
             <Route path="/player/team" element={<PlayerRoster />} />
             <Route path="/player/stats" element={<PlayerStats />} />
           </Route>

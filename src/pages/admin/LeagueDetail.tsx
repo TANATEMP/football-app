@@ -82,12 +82,6 @@ const LeagueDetail = () => {
               {leagueData.name}
             </h1>
           </div>
-
-          {leagueData.status === "REGISTRATION" && (
-            <button className="bg-blue-600 text-white px-5 py-2 rounded-lg font-bold text-sm shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all">
-              Manage Registration
-            </button>
-          )}
         </div>
 
         <div className="flex overflow-x-auto border-t border-gray-200 bg-gray-50/50 px-6">

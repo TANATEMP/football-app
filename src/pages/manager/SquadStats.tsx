@@ -8,7 +8,6 @@ interface PlayerStat {
   assists: number;
   yellowCards: number;
   redCards: number;
-  matchesPlayed: number;
 }
 
 interface Player {
@@ -53,9 +52,8 @@ const SquadStats = () => {
       goals: acc.goals + curr.goals,
       assists: acc.assists + curr.assists,
       yellowCards: acc.yellowCards + curr.yellowCards,
-      redCards: acc.redCards + curr.redCards,
-      matchesPlayed: acc.matchesPlayed + curr.matchesPlayed
-    }), { goals: 0, assists: 0, yellowCards: 0, redCards: 0, matchesPlayed: 0 });
+      redCards: acc.redCards + curr.redCards
+    }), { goals: 0, assists: 0, yellowCards: 0, redCards: 0 });
   };
 
   const sortedPlayers = [...players].sort((a, b) => {
@@ -85,14 +83,14 @@ const SquadStats = () => {
   return (
     <div className="max-w-7xl mx-auto space-y-10 pb-20 animate-fade-in">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-        <div>
-           <Link title="Back" to="/manager" className="text-blue-600 font-black text-xs uppercase tracking-widest hover:translate-x-[-4px] transition-transform inline-flex items-center gap-2 mb-4">
-             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-             Dashboard
-           </Link>
-           <h1 className="text-5xl font-black text-slate-900 tracking-tighter italic uppercase">{teamName}</h1>
-           <p className="text-slate-400 font-bold uppercase tracking-widest text-xs mt-2 italic shadow-slate-100 pb-1 border-b-2 border-slate-100">Squad Performance Analytics • Season 2024</p>
+            <div className="bg-slate-900 rounded-[3rem] p-12 text-white shadow-2xl relative overflow-hidden border border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-8">
+        <div className="relative z-10">
+          <h1 className="text-5xl font-black italic uppercase tracking-tighter shrink-0 flex items-center gap-4">
+            Squad Stats 📊
+          </h1>
+          <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] mt-2 relative z-10">
+          Analyze your player performance
+        </p>
         </div>
       </div>
 
@@ -139,10 +137,6 @@ const SquadStats = () => {
                  <span className="text-xs font-bold text-white/40 uppercase">Season Goals</span>
                  <span className="text-xl font-black italic text-blue-400">{players.reduce((sum, p) => sum + getAggregatedStats(p).goals, 0)}</span>
               </div>
-              <div className="flex justify-between items-center">
-                 <span className="text-xs font-bold text-white/40 uppercase">Clean Sheets</span>
-                 <span className="text-xl font-black italic text-emerald-400">-</span>
-              </div>
            </div>
         </div>
       </div>
@@ -151,9 +145,6 @@ const SquadStats = () => {
       <div className="bg-white rounded-[3rem] border border-slate-100 shadow-sm overflow-hidden">
         <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
            <h2 className="text-xl font-black text-slate-900 italic uppercase tracking-tighter">Detailed Performance</h2>
-           <div className="flex gap-2">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-white px-4 py-2 rounded-full border border-slate-100 shadow-inner">Sort descending by default ⏷</span>
-           </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse whitespace-nowrap">
@@ -165,7 +156,6 @@ const SquadStats = () => {
                 <th className="p-8 cursor-pointer hover:text-blue-600 transition-colors" onClick={() => requestSort('assists')}>Assists {sortConfig.key === 'assists' && (sortConfig.direction === 'asc' ? '▲' : '▼')}</th>
                 <th className="p-8 cursor-pointer hover:text-blue-600 transition-colors" onClick={() => requestSort('yellowCards')}>Yellow {sortConfig.key === 'yellowCards' && (sortConfig.direction === 'asc' ? '▲' : '▼')}</th>
                 <th className="p-8 cursor-pointer hover:text-blue-600 transition-colors" onClick={() => requestSort('redCards')}>Red {sortConfig.key === 'redCards' && (sortConfig.direction === 'asc' ? '▲' : '▼')}</th>
-                <th className="p-8 text-right pr-12">Apps</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -195,9 +185,6 @@ const SquadStats = () => {
                           <div className={`w-4 h-6 rounded-sm shadow-sm ${s.redCards > 0 ? 'bg-red-500' : 'bg-slate-100 grayscale'}`}></div>
                           <span className="font-black text-slate-400 italic text-sm">{s.redCards}</span>
                        </div>
-                    </td>
-                    <td className="p-8 text-right pr-12 font-black italic text-slate-400 group-hover:text-slate-900">
-                       {s.matchesPlayed} <span className="text-[10px] uppercase opacity-40 ml-1">Matches</span>
                     </td>
                   </tr>
                 );

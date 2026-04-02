@@ -85,7 +85,12 @@ const ManagerMatches = () => {
               
               return (
                 <div key={match.id} className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 group hover:shadow-xl hover:border-blue-200 transition-all duration-500">
-                  <div className="text-[8px] font-black uppercase tracking-widest text-slate-300 mb-6 text-center">{match.league?.name}</div>
+                  {/* ปรับแก้ชื่อลีกให้เด่นขึ้น */}
+                  <div className="text-center mb-6">
+                    <div className="inline-block bg-blue-50 border border-blue-100 text-blue-600 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm">
+                      {match.league?.name}
+                    </div>
+                  </div>
                   
                   <div className="flex items-center justify-between">
                     <div className="flex-1 text-center space-y-3">
@@ -103,11 +108,17 @@ const ManagerMatches = () => {
                       </span>
                     </div>
                     
-                    <div className="px-6 text-center">
-                      <div className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-300 mb-2">
-                        {new Date(match.matchDate).toLocaleDateString()}
+                    <div className="px-4 text-center">
+                      {/* ปรับแก้วันและเวลาให้ใหญ่และชัดเจนขึ้น */}
+                      <div className="mb-3">
+                        <div className="text-xs md:text-sm font-black uppercase text-slate-800 bg-slate-100 px-3 py-1 rounded-lg whitespace-nowrap">
+                          {new Date(match.matchDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </div>
+                        <div className="text-[11px] font-bold text-slate-500 mt-1 whitespace-nowrap">
+                          {new Date(match.matchDate).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
+                        </div>
                       </div>
-                      <div className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-black uppercase italic tracking-widest shadow-lg">VS</div>
+                      <div className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-black uppercase italic tracking-widest shadow-lg inline-block">VS</div>
                     </div>
 
                     <div className="flex-1 text-center space-y-3">
@@ -173,12 +184,13 @@ const ManagerMatches = () => {
                         </div>
                       </div>
                       
-                      <div className="hidden sm:flex flex-col items-end gap-0.5 shrink-0 ml-4">
-                        <div className="text-[7px] font-black uppercase tracking-widest text-slate-300 truncate max-w-[80px]">
+                      {/* ปรับแก้ชื่อลีกและวันเวลาประวัติย้อนหลังให้เด่นและอ่านง่ายขึ้น */}
+                      <div className="hidden sm:flex flex-col items-end gap-1 shrink-0 ml-4">
+                        <div className="text-[9px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded truncate max-w-[120px]">
                           {match.league?.name}
                         </div>
-                        <div className="text-[8px] font-bold text-slate-400 opacity-60">
-                          {new Date(match.matchDate).toLocaleDateString()}
+                        <div className="text-[10px] font-bold text-slate-500">
+                          {new Date(match.matchDate).toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: '2-digit' })}
                         </div>
                       </div>
                     </div>

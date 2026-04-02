@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../lib/api';
 import StandingsTab from '../../components/StandingsTab';
-// MatchesTab removed as requested
+import ConfirmModal from '../../components/ConfirmModal'; // 🔵 นำเข้า ConfirmModal (ปรับ path ตามจริง)
 
 // --- Improved Types ---
 interface MyTeam {
@@ -23,6 +23,14 @@ interface MyTeam {
   } | null;
 }
 
+// 🔵 กำหนด Interface สำหรับ Modal
+interface ModalState {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  type: 'INFO' | 'SUCCESS' | 'DANGER';
+}
+
 const ManagerDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [myTeam, setMyTeam] = useState<MyTeam | null>(null);
@@ -31,6 +39,14 @@ const ManagerDashboard = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({ name: '', shortName: '' });
   const [finalRank, setFinalRank] = useState<number | null>(null);
+
+  // 🔵 State สำหรับจัดการ Modal
+  const [modal, setModal] = useState<ModalState>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'INFO',
+  });
 
   // Helper for Rank suffixes (1st, 2nd, 3rd...)
   const getOrdinal = (n: number) => {
@@ -85,6 +101,9 @@ const ManagerDashboard = () => {
     fetchProfile();
   }, [fetchProfile]);
 
+  // 🔵 ฟังก์ชันปิด Modal
+  const closeModal = () => setModal(prev => ({ ...prev, isOpen: false }));
+
   const handleCreateTeam = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
@@ -95,8 +114,25 @@ const ManagerDashboard = () => {
         shortName: formData.shortName.toUpperCase(),
       });
       await fetchProfile();
+      
+      // 🔵 เปิด Modal แจ้งเตือนเมื่อสร้างทีมสำเร็จ
+      setModal({
+        isOpen: true,
+        title: 'สร้างสโมสรสำเร็จ!',
+        message: 'ทีมของคุณถูกสร้างเรียบร้อยแล้ว เตรียมพร้อมลุยได้เลย',
+        type: 'SUCCESS',
+      });
+
     } catch (err: any) {
-      alert(err.response?.data?.message || "Failed to create club");
+      const resMessage = err.response?.data?.message;
+      const errorMessage = Array.isArray(resMessage) ? resMessage.join(", ") : (resMessage || "Failed to create club");
+      
+      setModal({
+        isOpen: true,
+        title: 'เกิดข้อผิดพลาด',
+        message: errorMessage,
+        type: 'DANGER',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -107,24 +143,58 @@ const ManagerDashboard = () => {
   // Case: No Team Created yet
   if (!myTeam) {
     return (
-      <div className="max-w-3xl mx-auto pt-10 px-4 animate-fade-in">
-        <div className="bg-white rounded-[3rem] shadow-2xl border border-gray-100 overflow-hidden text-center p-16">
-          <div className="w-24 h-24 bg-blue-50 text-blue-600 rounded-[2rem] rotate-3 flex items-center justify-center mx-auto mb-8 shadow-inner border border-blue-100">
-            <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+      <>
+        <div className="max-w-3xl mx-auto pt-10 px-4 animate-fade-in">
+          <div className="bg-white rounded-[3rem] shadow-2xl border border-gray-100 overflow-hidden text-center p-16">
+            <div className="w-24 h-24 bg-blue-50 text-blue-600 rounded-[2rem] rotate-3 flex items-center justify-center mx-auto mb-8 shadow-inner border border-blue-100">
+              <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+            </div>
+            <h1 className="text-5xl font-black text-slate-900 mb-4 tracking-tighter italic uppercase">Build Your Legacy</h1>
+            <p className="text-slate-400 mb-10 text-lg font-bold uppercase tracking-widest text-[10px]">Register your club to begin competing.</p>
+            <form onSubmit={handleCreateTeam} className="max-w-md mx-auto text-left space-y-6 bg-slate-50 p-10 rounded-[2.5rem] border border-slate-100">
+              <input type="text" required placeholder="Club Name" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full px-6 py-4 rounded-2xl border-2 border-white bg-white shadow-sm focus:border-blue-500 outline-none" />
+              <input type="text" required placeholder="Short Name" value={formData.shortName} onChange={(e) => setFormData({...formData, shortName: e.target.value})} className="w-full px-6 py-4 rounded-2xl border-2 border-white bg-white shadow-sm focus:border-blue-500 outline-none uppercase" />
+              <button type="submit" disabled={isSubmitting} className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black italic uppercase tracking-widest">{isSubmitting ? 'Registering...' : 'INITIALIZE CLUB 🚀'}</button>
+            </form>
           </div>
-          <h1 className="text-5xl font-black text-slate-900 mb-4 tracking-tighter italic uppercase">Build Your Legacy</h1>
-          <p className="text-slate-400 mb-10 text-lg font-bold uppercase tracking-widest text-[10px]">Register your club to begin competing.</p>
-          <form onSubmit={handleCreateTeam} className="max-w-md mx-auto text-left space-y-6 bg-slate-50 p-10 rounded-[2.5rem] border border-slate-100">
-            <input type="text" required placeholder="Club Name" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full px-6 py-4 rounded-2xl border-2 border-white bg-white shadow-sm focus:border-blue-500 outline-none" />
-            <input type="text" required placeholder="Short Name" value={formData.shortName} onChange={(e) => setFormData({...formData, shortName: e.target.value})} className="w-full px-6 py-4 rounded-2xl border-2 border-white bg-white shadow-sm focus:border-blue-500 outline-none uppercase" />
-            <button type="submit" disabled={isSubmitting} className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black italic uppercase tracking-widest">{isSubmitting ? 'Registering...' : 'INITIALIZE CLUB 🚀'}</button>
-          </form>
+        </div>
+
+        {/* 🔵 ใส่ ConfirmModal ตรงนี้สำหรับการแจ้งเตือนสร้างทีม */}
+        <ConfirmModal
+          isOpen={modal.isOpen}
+          title={modal.title}
+          message={modal.message}
+          type={modal.type}
+          confirmText="ตกลง"
+          onConfirm={closeModal}
+          onCancel={closeModal}
+        />
+      </>
+    );
+  }
+
+  // Case: Application Rejected
+  if (myTeam.status === "REJECTED") {
+    return (
+      <div className="max-w-4xl mx-auto space-y-12 px-4 animate-fade-in text-center flex flex-col items-center justify-center min-h-[70vh]">
+        <div className="bg-white rounded-[3rem] p-16 shadow-2xl border-2 border-red-100 relative overflow-hidden max-w-2xl w-full">
+           <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-red-500 to-rose-600"></div>
+           
+           <h1 className="text-4xl font-black text-slate-900 mb-6 italic uppercase tracking-tighter">Sorry {myTeam.name}...</h1>
+           <p className="text-red-600 text-lg font-black uppercase tracking-widest text-[11px] mb-4 italic">Status: Application Rejected ✕</p>
+           
+           <Link to="/manager/leagues" className="group relative inline-flex items-center gap-4 bg-slate-900 hover:bg-red-600 text-white px-12 py-6 rounded-[2rem] font-black uppercase tracking-widest italic shadow-2xl transition-all active:scale-95 text-lg">
+             Looking for other leagues &rarr;
+             <div className="absolute inset-0 bg-white/20 scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-500 rounded-[2rem]"></div>
+           </Link>
+           
+           <p className="mt-8 text-slate-400 text-[10px] font-black uppercase italic tracking-widest">Champions never quit • Rise again!</p>
         </div>
       </div>
     );
   }
 
-  // Case: No League Joined
+  // Case: No League Joined (not applied yet)
   if (!myTeam.league) {
     return (
       <div className="max-w-4xl mx-auto space-y-12 px-4 animate-fade-in text-center flex flex-col items-center justify-center min-h-[70vh]">
@@ -148,7 +218,9 @@ const ManagerDashboard = () => {
   }
 
   // Active/Completed Dashboard
-  const isSeasonOver = myTeam.league?.status === 'COMPLETED';
+  // At this point, we know myTeam.league exists
+  const league = myTeam.league;
+  const isSeasonOver = league.status === 'COMPLETED';
 
   // Simplified Dashboard for Completed Seasons
   if (isSeasonOver) {
@@ -167,8 +239,9 @@ const ManagerDashboard = () => {
               <span className="w-6 h-[1px] bg-amber-200"></span>
            </div>
 
-           <h1 className="text-2xl font-black text-slate-900 mb-1 italic uppercase tracking-tighter shrink-0">{myTeam.name}</h1>
-           <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-8 opacity-60">{myTeam.league.name} • {myTeam.league.season}</p>
+           <h1 className="text-2xl font-black text-slate-900 mb-2 italic uppercase tracking-tighter shrink-0">{myTeam.name}</h1>
+           {/* ปรับให้ชื่อลีกใหญ่และชัดขึ้นสำหรับฤดูกาลที่จบไปแล้ว */}
+           <p className="text-slate-600 text-sm md:text-base font-black uppercase tracking-widest mb-8 drop-shadow-sm">{myTeam.league.name} • <span className="text-slate-400">Season {myTeam.league.season}</span></p>
            
            <div className="bg-slate-50/80 rounded-3xl p-8 mb-10 border border-slate-100/50">
               <div className="text-[8px] font-black uppercase tracking-[0.4em] text-slate-400 mb-2">Final Position</div>
@@ -179,7 +252,7 @@ const ManagerDashboard = () => {
            </div>
            
            <Link to="/manager/leagues" className="group relative inline-flex items-center gap-3 bg-slate-900 hover:bg-blue-600 text-white px-10 py-5 rounded-2xl font-black uppercase tracking-widest italic shadow-xl transition-all active:scale-95 text-sm">
-             สมัครลีกใหม่ 🚀
+             Join new league
              <div className="absolute inset-0 bg-white/10 scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-500 rounded-2xl"></div>
            </Link>
            
@@ -219,31 +292,32 @@ const ManagerDashboard = () => {
               {/* Team Registration Status */}
               <span className={`text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest italic border transition-all ${
                 myTeam.status === 'APPROVED' ? 'bg-emerald-400/20 text-emerald-400 border-emerald-400/30' : 
-                myTeam.status === 'REJECTED' ? 'bg-red-400/20 text-red-400 border-red-400/30' :
                 'bg-amber-400/20 text-amber-400 border-amber-400/30 shadow-lg shadow-amber-900/10'
               }`}>
                 {myTeam.status === 'APPROVED' ? '✓ Team Approved' : 
-                 myTeam.status === 'REJECTED' ? '✕ Team Rejected' : 
                  '⌛ Pending Registration'}
               </span>
 
               {/* League Phase Status */}
               <span className={`text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest italic border transition-all ${
-                myTeam.league.status === 'REGISTRATION' ? 'bg-blue-400/20 text-blue-400 border-blue-400/30' :
-                myTeam.league.status === 'PRE_SEASON' ? 'bg-purple-400/20 text-purple-400 border-purple-400/30 shadow-lg shadow-purple-900/10' :
-                myTeam.league.status === 'ONGOING' ? 'bg-emerald-400/20 text-emerald-400 border-emerald-400/30 shadow-lg shadow-emerald-900/10' :
+                league.status === 'REGISTRATION' ? 'bg-blue-400/20 text-blue-400 border-blue-400/30' :
+                league.status === 'PRE_SEASON' ? 'bg-purple-400/20 text-purple-400 border-purple-400/30 shadow-lg shadow-purple-900/10' :
+                league.status === 'ONGOING' ? 'bg-emerald-400/20 text-emerald-400 border-emerald-400/30 shadow-lg shadow-emerald-900/10' :
                 'bg-slate-400/20 text-slate-400 border-slate-400/30'
               }`}>
-                {myTeam.league.status === 'REGISTRATION' ? '● Registration Phase' :
-                 myTeam.league.status === 'PRE_SEASON' ? '⚙ Pre-Season (Preparing fixtures)' :
-                 myTeam.league.status === 'ONGOING' ? '⚽ Season Live' :
-                 '🏆 Tournament Finished'}
+                {league.status === 'REGISTRATION' ? 'Registration Phase' :
+                 league.status === 'PRE_SEASON' ? 'Pre-Season (Preparing fixtures)' :
+                 league.status === 'ONGOING' ? 'ONGOING' :
+                 'Tournament Finished'}
               </span>
 
-              <span className="bg-white/5 text-white/30 text-[10px] font-black px-4 py-1.5 rounded-full border border-white/5 uppercase tracking-widest italic">{myTeam.league.name}</span>
+              {/* ปรับให้ชื่อลีกเด่นขึ้น เป็นป้ายที่สว่างและฟอนต์ใหญ่กว่าเดิม */}
+              <span className="bg-gradient-to-r from-blue-500/40 to-indigo-500/40 text-white text-xs font-black px-5 py-2 rounded-full border border-blue-400/50 uppercase tracking-widest italic shadow-xl">
+                {league.name}
+              </span>
             </div>
             <h1 className="text-6xl font-black tracking-tighter italic uppercase leading-none">{myTeam.name}</h1>
-            {myTeam.status === 'APPROVED' && myTeam.league.status === 'PRE_SEASON' && (
+            {myTeam.status === 'APPROVED' && league.status === 'PRE_SEASON' && (
               <p className="mt-4 text-blue-400 font-black italic uppercase text-[10px] tracking-widest animate-pulse">
                 Your team is approved! waiting for the administrator to finalize the fixtures.
               </p>
@@ -308,8 +382,16 @@ const ManagerDashboard = () => {
         </div>
 
         <div className="lg:col-span-8 bg-white rounded-[3rem] shadow-sm border border-slate-100 p-10">
-           <h2 className="text-4xl font-black text-slate-900 italic uppercase tracking-tighter mb-10">{isSeasonOver ? 'Final History' : 'League Outlook'}</h2>
-           <StandingsTab leagueId={myTeam.league.id} status={myTeam.league.status} />
+           <div className="flex items-center justify-between mb-10">
+              <h2 className="text-4xl font-black text-slate-900 italic uppercase tracking-tighter">{isSeasonOver ? 'Final History' : 'League Outlook'}</h2>
+              <Link 
+                to="/manager/standings" 
+                className="text-[10px] font-black uppercase tracking-widest text-blue-600 border-b-2 border-blue-100 hover:border-blue-600 pb-1 transition-all italic"
+              >
+                View Full Table &rarr;
+              </Link>
+           </div>
+           <StandingsTab leagueId={league.id} status={league.status} />
         </div>
       </div>
     </div>
