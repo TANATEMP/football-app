@@ -1,52 +1,72 @@
-import { useCallback, useEffect, useState } from "react"; // 👈 เพิ่ม useEffect
+import { useCallback, useEffect, useState } from "react";
 import type { League } from "../../types";
 import LeagueCard from "../../components/LeagueCard";
 import CreateLeagueModal from "../../components/CreateLeagueModal";
+import api from "../../lib/api";
 import axios from "axios";
 
-const api = axios.create({ baseURL: "http://localhost:3000" });
 const LeagueManagement = () => {
-  // 1. เปลี่ยนจาก MOCK_LEAGUES เป็นอาเรย์ว่างก่อน
   const [leagues, setLeagues] = useState<League[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-
-  // 2. ฟังก์ชันดึงข้อมูลจาก API (NestJS)
 
   // 📥 ดึงข้อมูล (GET)
   const fetchLeagues = useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await api.get("/leagues");
-      setLeagues(response.data);
+      console.log(response);
+      
+      // ดึงข้อมูลให้ครอบคลุมทั้งกรณีที่หุ้มด้วย data หรือไม่หุ้ม
+      const payload = response.data.data !== undefined ? response.data.data : response.data;
+      const rows = Array.isArray(payload) ? payload : (payload.data || payload.rows || []);
+      // Map Prisma fields → frontend League type
+      setLeagues(
+        rows.map((l: any) => ({
+          ...l,
+          currentTeams: l.approvedTeamsCount ?? l._count?.teams ?? l.teams?.length ?? 0,
+          totalApplicants: l.totalApplicants ?? 0,
+          approvedTeamsCount: l.approvedTeamsCount ?? 0,
+          totalMatches: l.totalMatches ?? 0,
+          completedMatches: l.completedMatches ?? 0,
+          maxTeams: l.maxTeams ?? 20,
+        }))
+      );
     } catch (error) {
       console.error("Error:", error);
     } finally {
       setIsLoading(false);
     }
-  }, []); // [] ตรงนี้บอกว่าสร้างฟังก์ชันนี้แค่ครั้งเดียวพอ
+  }, []);
 
-  // 🔄 ตอนนี้ใส่ fetchLeagues ลงใน dependency ได้อย่างสบายใจ
   useEffect(() => {
     fetchLeagues();
   }, [fetchLeagues]);
 
   // 📤 ส่งข้อมูลสร้าง (POST)
-  const handleCreateLeague = async (formData: {
-    name: string;
-    season: string;
-    maxTeams: number;
-  }) => {
+  const handleCreateLeague = async (formData: any) => {
     try {
-      await api.post("/leagues", formData); // ไม่ต้อง JSON.stringify เอง
-      await fetchLeagues(); // ดึงข้อมูลใหม่
+      await api.post("/leagues", {
+        name: formData.name,
+        season: new Date().getFullYear().toString(),
+        description: formData.description,
+        start_date: formData.startDate,
+        end_date: formData.endDate,
+        registrationEnd: formData.registrationEnd,
+        status: "REGISTRATION",
+        maxTeams: formData.maxTeams || 16,
+        daysOfWeek: formData.daysOfWeek,
+        startTime: formData.startTime,
+        endTime: formData.endTime,
+        matchDuration: formData.matchDuration,
+        matchFormat: formData.matchFormat
+      });
+      await fetchLeagues();
       setIsModalOpen(false);
     } catch (error: unknown) {
-      // 👈 เปลี่ยนจาก any เป็น unknown
       if (axios.isAxiosError(error)) {
-        // 👈 ใช้ฟังก์ชันเช็คว่าเป็น Error จาก Axios จริงไหม
         const message = error.response?.data?.message || "เกิดข้อผิดพลาด";
-        alert(`สร้างไม่สำเร็จ: ${message}`);
+        alert(`สร้างไม่สำเร็จ: ${Array.isArray(message) ? message.join('\n') : message}`);
       } else {
         alert("เกิดข้อผิดพลาดที่ไม่คาดคิด");
       }
@@ -62,7 +82,7 @@ const LeagueManagement = () => {
             League Management
           </h1>
           <p className="text-gray-500 mt-1">
-            จัดการและควบคุมการแข่งขันทั้งหมดในระบบ (Real-time DB)
+            จัดการและควบคุมการแข่งขันทั้งหมดในระบบ
           </p>
         </div>
         <button
@@ -86,16 +106,61 @@ const LeagueManagement = () => {
         </button>
       </div>
 
-      {/* แสดง Loading หรือรายการ League */}
+      {/* แสดง Loading หรือรายการ League แบ่งตามกลุ่ม */}
       {isLoading ? (
-        <div className="text-center py-20 text-gray-500">
-          กำลังดึงข้อมูลจากฐานข้อมูล...
+        <div className="text-center py-20 text-gray-500 font-medium animate-pulse">
+          กำลังดึงข้อมูลทัวร์นาเมนต์...
+        </div>
+      ) : leagues.length === 0 ? (
+        <div className="text-center py-20 text-gray-400 border-2 border-dashed border-gray-200 rounded-[2rem] bg-gray-50/50">
+          <div className="text-5xl mb-4 opacity-20">🏆</div>
+          <p className="text-xl font-black italic uppercase tracking-tighter text-slate-900 mb-2">ยังไม่มีลีกการแข่งขัน</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">กดปุ่ม "Create New League" เพื่อเริ่มสร้างประวัติศาสตร์</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {leagues.map((league) => (
-            <LeagueCard key={league.id} league={league} />
-          ))}
+        <div className="space-y-16">
+          {/* 1. Recruitment & Registration */}
+          {leagues.some(l => l.status === 'REGISTRATION') && (
+            <div className="space-y-6">
+              <h3 className="text-[10px] font-black text-blue-600 uppercase tracking-[0.3em] italic border-l-4 border-blue-600 pl-4 flex items-center gap-3">
+                Recruitment Phase
+                <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-ping"></span>
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {leagues.filter(l => l.status === 'REGISTRATION').map((league) => (
+                  <LeagueCard key={league.id} league={league} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 2. Pre-Season & Ongoing */}
+          {leagues.some(l => l.status === 'PRE_SEASON' || l.status === 'ONGOING') && (
+            <div className="space-y-6">
+              <h3 className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.3em] italic border-l-4 border-emerald-600 pl-4">
+                Active Tournaments
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {leagues.filter(l => l.status === 'PRE_SEASON' || l.status === 'ONGOING').map((league) => (
+                  <LeagueCard key={league.id} league={league} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 3. Completed Archive */}
+          {leagues.some(l => l.status === 'COMPLETED') && (
+            <div className="space-y-6 pt-10 border-t border-slate-100">
+              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] italic border-l-4 border-slate-200 pl-4">
+                History & Archives
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 opacity-80 grayscale-[0.5] hover:grayscale-0 transition-all duration-500">
+                {leagues.filter(l => l.status === 'COMPLETED').map((league) => (
+                  <LeagueCard key={league.id} league={league} />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

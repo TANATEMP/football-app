@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import api from "../../lib/api";
 import axios from "axios";
 
 interface User {
   id: string;
   name: string;
   email: string;
-  role: "ADMIN" | "MANAGER" | "PLAYER";
+  role: "ADMIN" | "MANAGER" | "PLAYER" | "VIEWER";
   status: "ACTIVE" | "BANNED";
-  joinedDate?: string; // ใส่ ? ไว้เผื่อ Backend ไม่ได้ส่งมา
+  joinedDate?: string;
 }
 
 const UserManagement: React.FC = () => {
@@ -16,31 +17,25 @@ const UserManagement: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const API_URL = "http://localhost:3000/users";
-
   // 🔵 1. ฟังก์ชันดึงข้อมูลจาก API
-  const fetchUsers = async () => {
-    const token = localStorage.getItem("token"); // 👈 ดึง Token สดใหม่ทุกครั้งที่เรียก API
-
-    if (!token) {
-      setError("ไม่พบ Token กรุณาเข้าสู่ระบบใหม่");
-      setIsLoading(false);
-      return;
-    }
-
+  const fetchUsers = useCallback(async () => {
     try {
       setIsLoading(true);
-      const response = await axios.get<User[]>(API_URL, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setUsers(response.data);
+      // ใช้ shared api instance — token ถูกแนบอัตโนมัติ
+      const response = await api.get("/user/list");
+      // Backend wraps: { success, data: [...], meta }
+      const payload = response.data.data;
+      setUsers(Array.isArray(payload) ? payload : []);
       setError(null);
     } catch (err) {
-      // 🛡️ เช็คก่อนว่า Error นี้มาจาก Axios (API) หรือไม่
       if (axios.isAxiosError(err)) {
-        setError(
-          err.response?.data?.message || "ไม่สามารถโหลดข้อมูลผู้ใช้งานได้",
-        );
+        if (err.response?.status === 401) {
+          setError("ไม่พบ Token กรุณาเข้าสู่ระบบใหม่");
+        } else {
+          setError(
+            err.response?.data?.message || "ไม่สามารถโหลดข้อมูลผู้ใช้งานได้",
+          );
+        }
       } else {
         setError("เกิดข้อผิดพลาดที่ไม่รู้จัก");
       }
@@ -48,37 +43,29 @@ const UserManagement: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [fetchUsers]);
 
   // 🔵 2. ฟังก์ชันสลับสถานะ
   const toggleStatus = async (id: string, currentStatus: string) => {
-    const token = localStorage.getItem("token");
-    if (!token) return alert("กรุณาเข้าสู่ระบบใหม่");
-
     try {
       const newStatus = currentStatus === "ACTIVE" ? "BANNED" : "ACTIVE";
 
-      // อัปเดต UI ทันที (Optimistic UI Update) เพื่อให้เว็บดูลื่นไหล
+      // Optimistic UI Update
       setUsers((prev) =>
-        prev.map((u) => (u.id === id ? { ...u, status: newStatus } : u)),
+        prev.map((u) => (u.id === id ? { ...u, status: newStatus as "ACTIVE" | "BANNED" } : u)),
       );
 
-      // ส่งคำขอไปที่ Backend
-      await axios.patch(
-        `${API_URL}/${id}/status`,
-        { status: newStatus },
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      // ใช้ shared api — token แนบอัตโนมัติ
+      await api.patch(`/user/${id}/status`, { status: newStatus });
     } catch (err) {
-      // 🛡️ เช็คก่อนว่า Error นี้มาจาก Axios (API) หรือไม่
+      // Revert on failure
+      fetchUsers();
       if (axios.isAxiosError(err)) {
-        setError(err.response?.data?.message || 'ไม่สามารถโหลดข้อมูลผู้ใช้งานได้');
-      } else {
-        setError('เกิดข้อผิดพลาดที่ไม่รู้จัก');
+        alert(err.response?.data?.message || "ไม่สามารถอัปเดตสถานะได้");
       }
       console.error(err);
     }
@@ -97,7 +84,7 @@ const UserManagement: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold text-slate-800">User Management</h1>
           <p className="text-slate-500">
-            จัดการผู้ใช้งานในระบบ (Real-time API)
+            จัดการผู้ใช้งานในระบบ
           </p>
         </div>
 
@@ -194,7 +181,6 @@ const UserManagement: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      {/* 🛡️ ป้องกันไม่ให้ Admin แบนตัวเอง */}
                       <button
                         onClick={() => toggleStatus(user.id, user.status)}
                         disabled={user.role === "ADMIN"}

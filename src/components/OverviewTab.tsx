@@ -1,230 +1,297 @@
 // src/components/OverviewTab.tsx
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import api from '../lib/api';
+import axios from 'axios';
 import type { LeagueStatus } from '../pages/admin/LeagueDetail';
 
 interface OverviewTabProps {
   status: LeagueStatus;
   data: any;
+  onRefresh?: () => void;
 }
 
-const OverviewTab: React.FC<OverviewTabProps> = ({ status, data }) => {
+const OverviewTab: React.FC<OverviewTabProps> = ({ status, data, onRefresh }) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [fixtureCount, setFixtureCount] = useState<number>(0);
+  const [completedCount, setCompletedCount] = useState<number>(0);
+  const [totalGoals, setTotalGoals] = useState<number>(0);
   
-  // ==========================================
-  // 1. สถานะเปิดรับสมัคร (REGISTRATION)
-  // ==========================================
+  const dayNames = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
+  const scheduleSummary = data ? `${data.daysOfWeek?.map((d: number) => dayNames[d]).join(', ')} @ ${data.startTime}` : '';
+
+  const checkFixtures = useCallback(async () => {
+    if (!data?.id) return;
+    try {
+      // Fetch ALL matches
+      const resTotal = await api.get('/matches', { params: { leagueId: data.id } });
+      const payloadTotal = resTotal.data.data !== undefined ? resTotal.data.data : resTotal.data;
+      const total = payloadTotal.pagination?.total ?? (Array.isArray(payloadTotal) ? payloadTotal.length : (payloadTotal.data?.length ?? 0));
+      setFixtureCount(total);
+
+      // Fetch COMPLETED matches (if ongoing)
+      if (status === 'ONGOING' || status === 'COMPLETED') {
+        const resDone = await api.get('/matches', { params: { leagueId: data.id, status: 'COMPLETED' } });
+        const payloadDone = resDone.data.data !== undefined ? resDone.data.data : resDone.data;
+        const done = payloadDone.pagination?.total ?? (Array.isArray(payloadDone) ? payloadDone.length : (payloadDone.data?.length ?? 0));
+        setCompletedCount(done);
+
+        // Fetch standings to get total goals
+        const resStandings = await api.get(`/leagues/${data.id}/standings`);
+        const standings = resStandings.data.data || resStandings.data;
+        const totalG = standings.reduce((acc: number, s: any) => acc + s.goalsFor, 0);
+        setTotalGoals(totalG);
+      }
+    } catch {
+      setFixtureCount(0);
+    }
+  }, [status, data]); // Fixed: Listen to entire data object change
+
+  useEffect(() => {
+    checkFixtures();
+  }, [checkFixtures]);
+
+  const handleCloseRegistration = async () => {
+    if (!confirm('ปิดรับสมัครทีม แล้วเข้าสู่ช่วง Pre-Season?')) return;
+    try {
+      setIsSubmitting(true);
+      await api.patch(`/leagues/${data.id}/status`, { status: 'PRE_SEASON' });
+      alert('✅ Registration closed!');
+      onRefresh?.();
+    } catch (err) {
+      if (axios.isAxiosError(err)) alert(err.response?.data?.error?.message || 'Failed to update status');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleGenerateFixtures = async () => {
+    if (!confirm('สร้างตารางแข่งแบบพบกันหมด?')) return;
+    try {
+      setIsSubmitting(true);
+      await api.post(`/leagues/${data.id}/generate-fixtures`, {});
+      alert(`✅ สร้างตารางสำเร็จ! อ้างอิงตามค่าเริ่มต้นของลีก`);
+      onRefresh?.();
+      checkFixtures();
+    } catch (err) {
+      if (axios.isAxiosError(err)) alert(err.response?.data?.error?.message || 'Failed');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleStartSeason = async () => {
+    if (!confirm('🚨 เริ่มฤดูกาลอย่างเป็นทางการ?')) return;
+    try {
+      setIsSubmitting(true);
+      await api.post(`/leagues/${data.id}/start-season`);
+      alert('🏆 ฤดูกาลเริ่มต้นแล้ว!');
+      onRefresh?.();
+    } catch (err) {
+      if (axios.isAxiosError(err)) alert(err.response?.data?.error?.message || 'Failed');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleEndSeason = async () => {
+    if (!confirm('🏁 ต้องการสิ้นสุดฤดูกาลนี้ใช่หรือไม่? ข้อมูลจะถูกล็อกเป็น COMPLETED')) return;
+    try {
+      setIsSubmitting(true);
+      await api.patch(`/leagues/${data.id}/status`, { status: 'COMPLETED' });
+      alert('🏆 ฤดูกาลสิ้นสุดลงแล้ว!');
+      onRefresh?.();
+    } catch (err) {
+      if (axios.isAxiosError(err)) alert(err.response?.data?.error?.message || 'Failed to end season');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   if (status === 'REGISTRATION') {
+    const isFull = data.currentTeams >= data.maxTeams;
+
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
-        <div className="lg:col-span-2 space-y-6">
-          {/* Progress Card */}
-          <div className="bg-blue-600 p-8 rounded-[2rem] text-white shadow-xl shadow-blue-100 flex items-center justify-between overflow-hidden relative">
-            <div className="relative z-10">
-              <h3 className="text-3xl font-black italic tracking-tighter mb-1">RECRUITING TEAMS</h3>
-              <p className="text-blue-100 font-bold uppercase text-xs tracking-widest">
-                Joined: {data.currentTeams} / {data.maxTeams} Teams
-              </p>
-              <div className="mt-4 h-2 w-48 bg-blue-900/30 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-white transition-all duration-1000" 
-                  style={{ width: `${(data.currentTeams / data.maxTeams) * 100}%` }}
-                ></div>
-              </div>
-            </div>
-            <div className="text-8xl opacity-20 absolute -right-4 -bottom-4 rotate-12">📝</div>
-          </div>
-          
-          {/* Pending Requests */}
-          <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm">
-            <div className="flex justify-between items-center mb-6">
-               <h4 className="font-black text-slate-800 uppercase text-xs tracking-[0.2em]">Pending Requests</h4>
-               <span className="bg-orange-100 text-orange-600 text-[10px] font-black px-2 py-1 rounded-md">3 WAITING</span>
-            </div>
-            <div className="space-y-3">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-transparent hover:border-blue-200 transition-all group">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm font-bold text-blue-600">T{i}</div>
-                    <span className="font-bold text-slate-700">Team Name {i} FC</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <button className="px-4 py-2 bg-white text-slate-400 rounded-xl text-xs font-bold hover:text-red-500 transition-colors">Reject</button>
-                    <button className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 shadow-md shadow-blue-100">Approve</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Setup Checklist */}
-        <div className="bg-slate-900 rounded-[2rem] p-8 text-white h-fit sticky top-6">
-          <h3 className="font-black italic text-xl mb-6 tracking-tight text-blue-400">LEAGUE READINESS</h3>
-          <ul className="space-y-5">
-            <li className="flex items-start gap-3">
-              <span className="bg-green-500/20 text-green-500 p-1 rounded-lg text-xs">✔</span>
-              <div>
-                <p className="text-sm font-bold">Basic Identity</p>
-                <p className="text-[10px] text-slate-500 uppercase font-bold">League info & Logo set</p>
-              </div>
-            </li>
-            <li className="flex items-start gap-3">
-              <span className={`p-1 rounded-lg text-xs ${data.currentTeams >= data.maxTeams ? 'bg-green-500/20 text-green-500' : 'bg-slate-800 text-slate-600'}`}>
-                {data.currentTeams >= data.maxTeams ? '✔' : '○'}
-              </span>
-              <div>
-                <p className={`text-sm font-bold ${data.currentTeams >= data.maxTeams ? 'text-white' : 'text-slate-500'}`}>Squad Full</p>
-                <p className="text-[10px] text-slate-500 uppercase font-bold">{data.currentTeams}/{data.maxTeams} Teams approved</p>
-              </div>
-            </li>
-            <li className="flex items-start gap-3 opacity-50">
-              <span className="bg-slate-800 text-slate-600 p-1 rounded-lg text-xs">○</span>
-              <div>
-                <p className="text-sm font-bold text-slate-500">Fixture Generated</p>
-                <p className="text-[10px] text-slate-500 uppercase font-bold">Waiting for teams...</p>
-              </div>
-            </li>
-          </ul>
-          <button 
-            disabled={data.currentTeams < data.maxTeams}
-            className="w-full mt-10 py-4 bg-blue-600 disabled:bg-slate-800 disabled:text-slate-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs transition-all active:scale-95 shadow-lg shadow-blue-900/20"
-          >
-            Launch Season 🚀
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // ==========================================
-  // 2. สถานะแข่งขันจบแล้ว (COMPLETED)
-  // ==========================================
-  if (status === 'COMPLETED') {
-    return (
-      <div className="animate-fade-in space-y-8">
-        <div className="bg-gradient-to-r from-yellow-400 via-yellow-200 to-yellow-400 p-1 rounded-[2.5rem] shadow-2xl shadow-yellow-100">
-          <div className="bg-slate-900 rounded-[2.4rem] p-12 text-center relative overflow-hidden">
-            <div className="relative z-10">
-              <div className="text-6xl mb-4">🏆</div>
-              <h2 className="text-yellow-400 text-xs font-black uppercase tracking-[0.4em] mb-2">Season Champion</h2>
-              <h3 className="text-5xl font-black italic text-white tracking-tighter mb-6">TEAM NAME 1 FC</h3>
-              <div className="flex justify-center gap-8">
-                <div className="text-center">
-                  <p className="text-slate-500 text-[10px] font-black uppercase">Points</p>
-                  <p className="text-2xl font-black text-white">45</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-slate-500 text-[10px] font-black uppercase">Goal Diff</p>
-                  <p className="text-2xl font-black text-white">+28</p>
-                </div>
-              </div>
-            </div>
-            {/* Background Decor */}
-            <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
-          </div>
-        </div>
-        <button className="w-full py-4 border-2 border-slate-100 rounded-2xl text-slate-400 font-black uppercase text-xs tracking-widest hover:bg-slate-50 transition-all">
-          View Season Archive & Report 📄
-        </button>
-      </div>
-    );
-  }
-
-  // ==========================================
-  // 3. สถานะกำลังแข่งขัน (ACTIVE)
-  // ==========================================
-  const stats = [
-    { label: 'Total Teams', value: data.maxTeams, icon: '🛡️', color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'Played', value: '42 / 120', icon: '⚽', color: 'text-green-600', bg: 'bg-green-50' },
-    { label: 'Pending Results', value: '5', icon: '⏳', color: 'text-yellow-600', bg: 'bg-yellow-50' },
-    { label: 'Top Scorer', value: 'M. Salah', icon: '👟', color: 'text-purple-600', bg: 'bg-purple-50' },
-  ];
-
-  return (
-    <div className="space-y-8 animate-fade-in">
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat) => (
-          <div key={stat.label} className="p-6 rounded-3xl border border-slate-100 bg-white shadow-sm flex items-center gap-5 transition-all hover:shadow-md group">
-            <div className={`w-14 h-14 ${stat.bg} flex items-center justify-center rounded-2xl text-2xl group-hover:scale-110 transition-transform`}>{stat.icon}</div>
+      <div className="space-y-6 animate-fade-in">
+        {/* Compact Header & Action Row */}
+        <div className="bg-white border border-slate-100 rounded-[2.5rem] p-4 shadow-sm flex flex-wrap items-center justify-between gap-6">
+          <div className="flex items-center gap-6 px-4">
+            <div className="w-16 h-16 bg-blue-600 rounded-3xl flex items-center justify-center text-white text-3xl shadow-xl shadow-blue-100">🏆</div>
             <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1.5">{stat.label}</p>
-              <p className="text-2xl font-black text-slate-800 tracking-tight">{stat.value}</p>
+              <h3 className="text-2xl font-black italic tracking-tighter uppercase leading-none">REGISTRATION OPEN</h3>
+              <div className="flex items-center gap-3 mt-2">
+                <span className="text-[10px] font-black bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full uppercase tracking-widest border border-blue-100">
+                  {data.currentTeams} / {data.maxTeams} Teams
+                </span>
+                <div className="w-32 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-blue-600 transition-all duration-500" style={{ width: `${(data.currentTeams/data.maxTeams)*100}%` }} />
+                </div>
+              </div>
             </div>
           </div>
-        ))}
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Table Leaderboard */}
-        <div className="lg:col-span-2 space-y-5">
-          <div className="flex items-center justify-between px-2">
-            <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
-              <span className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></span>
-              Current Leaders
-            </h3>
-            <button className="text-[10px] font-black text-blue-600 hover:text-blue-800 uppercase tracking-widest">Full Standings &rarr;</button>
-          </div>
-          <div className="bg-white rounded-[2rem] border border-slate-100 overflow-hidden shadow-sm">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-slate-50/50 text-[10px] text-slate-400 uppercase tracking-[0.15em] border-b border-slate-50">
-                  <th className="p-5 text-left font-black">Pos</th>
-                  <th className="p-5 text-left font-black">Club</th>
-                  <th className="p-5 text-center font-black">P</th>
-                  <th className="p-5 text-center font-black">GD</th>
-                  <th className="p-5 text-center font-black text-blue-600">Pts</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {[1, 2, 3, 4, 5].map((pos) => (
-                  <tr key={pos} className="hover:bg-slate-50/50 transition-colors group">
-                    <td className="p-5 font-black text-slate-300 group-hover:text-blue-600 transition-colors">{pos.toString().padStart(2, '0')}</td>
-                    <td className="p-5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-slate-100 rounded-lg"></div>
-                        <span className="font-bold text-slate-700 italic">TEAM NAME {pos}</span>
-                      </div>
-                    </td>
-                    <td className="p-5 text-center font-bold text-slate-500">10</td>
-                    <td className="p-5 text-center font-bold text-slate-500">+{15 - pos}</td>
-                    <td className="p-5 text-center font-black text-blue-600 text-lg">{30 - pos * 3}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="flex-1 min-w-[300px] flex justify-end px-4">
+            <button 
+              disabled={isSubmitting || !isFull}
+              onClick={handleCloseRegistration}
+              className={`group relative overflow-hidden px-10 py-5 rounded-3xl font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center gap-3 shadow-2xl ${
+                isFull 
+                ? 'bg-blue-900 text-white hover:bg-black hover:scale-105 active:scale-95 shadow-blue-200' 
+                : 'bg-slate-50 text-slate-300 cursor-not-allowed border border-slate-100 shadow-none'
+              }`}
+            >
+              <span className="relative z-10 flex items-center gap-2">
+                {isFull ? 'Close Registration & Start Pre-Season ⏩' : `Wait for ${data.maxTeams - data.currentTeams} More Teams...`}
+              </span>
+            </button>
           </div>
         </div>
 
-        {/* Quick Actions Side */}
-        <div className="space-y-6">
-          <div className="bg-slate-900 rounded-[2rem] p-8 text-white shadow-xl shadow-slate-200 relative overflow-hidden">
-            <h3 className="font-black text-[10px] uppercase tracking-[0.2em] text-blue-400 mb-6 relative z-10">Admin Control</h3>
-            <div className="space-y-3 relative z-10">
-              <button className="w-full py-3.5 bg-white/5 hover:bg-white/10 rounded-2xl transition-all text-left px-5 flex items-center justify-between group">
-                <span className="text-xs font-bold tracking-wide">Edit League Settings</span>
-                <span className="group-hover:translate-x-1 transition-transform">⚙️</span>
-              </button>
-              <button className="w-full py-3.5 bg-white/5 hover:bg-white/10 rounded-2xl transition-all text-left px-5 flex items-center justify-between group">
-                <span className="text-xs font-bold tracking-wide">Report Match Result</span>
-                <span className="group-hover:translate-x-1 transition-transform">⚽</span>
-              </button>
-              <button className="w-full mt-4 py-3.5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-2xl transition-all text-xs font-black uppercase tracking-widest text-center border border-red-500/20">
-                Close Season 🔒
-              </button>
+        {/* Combined Info Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Description - Compact */}
+          <div className="md:col-span-2 bg-white border border-slate-100 rounded-[2.5rem] p-8 shadow-sm relative overflow-hidden">
+            <div className="relative z-10">
+              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4">League Identity & Rules</h4>
+              <p className="text-slate-600 text-sm leading-7 italic whitespace-pre-wrap">"{data.description || 'No description provided.'}"</p>
             </div>
-            <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-blue-600/10 rounded-full blur-3xl"></div>
+            <div className="absolute top-8 right-8 text-6xl opacity-[0.03] rotate-12 pointer-events-none font-serif">"</div>
           </div>
 
-          <div className="bg-blue-50 rounded-[2rem] p-8 border border-blue-100">
-            <h3 className="font-black text-[10px] uppercase tracking-[0.2em] text-blue-600 mb-4">Last Notice</h3>
-            <p className="text-xs text-blue-900/70 font-bold leading-relaxed italic">
-              "Please verify all match scores from Week 5 by this Sunday evening. Champion trophy presentation is scheduled for final match day."
+          {/* Quick Config Summary */}
+          <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-xl flex flex-col justify-between">
+            <div>
+              <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-[0.3em] mb-6">Schedule Policy</h4>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Match Days</span>
+                  <span className="text-sm font-black italic">{scheduleSummary}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Format</span>
+                  <span className="text-sm font-black italic uppercase text-blue-400">
+                    {data.matchFormat === 'DOUBLE' ? 'Home & Away' : 'Single Round'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Duration</span>
+                  <span className="text-sm font-black italic">{data.matchDuration} Mins</span>
+                </div>
+              </div>
+            </div>
+            <div className="mt-8 pt-6 border-t border-slate-800 text-center">
+               <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-loose">
+                 Settings are locked until pre-season generation phase.
+               </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // PRE_SEASON view remains concise as already implemented
+  if (status === 'PRE_SEASON' || status === 'ONGOING' || status === 'COMPLETED') {
+    const isOngoing = status === 'ONGOING';
+    const isCompleted = status === 'COMPLETED';
+    const fixturesGenerated = fixtureCount > 0;
+    const progress = fixtureCount > 0 ? Math.round((completedCount / fixtureCount) * 100) : 0;
+
+    return (
+      <div className="space-y-6 animate-fade-in">
+        {/* Status Header */}
+        <div className={`p-10 rounded-[3rem] text-white shadow-2xl flex items-center justify-between relative overflow-hidden ${
+          isOngoing ? 'bg-gradient-to-br from-blue-600 to-indigo-800' : 
+          isCompleted ? 'bg-gradient-to-br from-slate-700 to-slate-900' :
+          'bg-slate-900 border border-slate-800'
+        }`}>
+          <div className="relative z-10">
+            <h3 className="text-4xl font-black italic tracking-tighter mb-2 uppercase">
+              {isOngoing ? 'Season Live' : isCompleted ? 'Season Finished' : 'Preparation Phase'}
+            </h3>
+            <p className="text-white/60 font-black uppercase text-[10px] tracking-[0.3em]">
+              {isOngoing ? `Progress: ${progress}% (${completedCount}/${fixtureCount} Matches)` : 
+               isCompleted ? `Final: ${fixtureCount} Matches Played` :
+               `Total Fixtures: ${fixtureCount}`}
             </p>
           </div>
+          
+          <div className="relative z-10 flex gap-4">
+            {status === 'PRE_SEASON' && !fixturesGenerated && (
+              <button onClick={handleGenerateFixtures} disabled={isSubmitting} className="bg-blue-600 hover:bg-white hover:text-blue-600 px-10 py-5 rounded-3xl font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-blue-900/40">
+                {isSubmitting ? 'Generating...' : 'Generate Fixtures ⚽'}
+              </button>
+            )}
+            {status === 'PRE_SEASON' && fixturesGenerated && (
+              <button onClick={handleStartSeason} disabled={isSubmitting} className="bg-emerald-500 hover:bg-white hover:text-emerald-500 px-10 py-5 rounded-3xl font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-emerald-900/40">
+                Start Season 📢
+              </button>
+            )}
+            {(isOngoing || isCompleted) && (
+              <div className="bg-white/10 backdrop-blur-md px-8 py-5 rounded-3xl border border-white/10 flex flex-col items-end">
+                 <p className="text-[10px] font-black uppercase tracking-widest text-blue-300 mb-1">
+                   {isCompleted ? '🏆 Tournament Locked' : '⚽ Competition Active'}
+                 </p>
+                 <div className="w-32 h-1.5 bg-white/20 rounded-full mt-2 overflow-hidden">
+                    <div className="h-full bg-blue-400 transition-all duration-1000" style={{ width: `${progress}%` }} />
+                 </div>
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Ongoing Stats Grid */}
+        {(isOngoing || isCompleted) && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+             <div className="bg-white border border-slate-100 rounded-[2.5rem] p-8 shadow-sm text-center">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Matches Played</p>
+                <p className="text-4xl font-black italic text-slate-800">{completedCount} <span className="text-lg text-slate-300 mx-1">/</span> {fixtureCount}</p>
+             </div>
+             
+             <div className="bg-white border border-slate-100 rounded-[2.5rem] p-8 shadow-sm text-center">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Goals</p>
+                <p className="text-4xl font-black italic text-blue-600">{totalGoals}</p>
+             </div>
+
+             <div className="bg-white border border-slate-100 rounded-[2.5rem] p-8 shadow-sm text-center">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Average Goals</p>
+                <p className="text-4xl font-black italic text-slate-800">
+                  {completedCount > 0 ? (totalGoals / completedCount).toFixed(1) : '0.0'}
+                </p>
+             </div>
+
+             {isOngoing && (
+               <div className={`rounded-[2.5rem] p-8 text-center flex flex-col justify-center items-center border-2 transition-all ${
+                 completedCount === fixtureCount && fixtureCount > 0
+                 ? 'bg-red-50 border-red-200 shadow-lg shadow-red-100 animate-pulse'
+                 : 'bg-slate-50 border-slate-200 border-dashed opacity-60'
+               }`}>
+                  <button 
+                    disabled={isSubmitting || completedCount < fixtureCount || fixtureCount === 0}
+                    onClick={handleEndSeason} 
+                    className={`font-black text-[10px] uppercase tracking-widest transition-all ${
+                      completedCount === fixtureCount && fixtureCount > 0
+                      ? 'text-red-600 hover:scale-110 active:scale-95'
+                      : 'text-slate-400 cursor-not-allowed'
+                    }`}
+                  >
+                    {completedCount === fixtureCount && fixtureCount > 0 
+                      ? 'OFFICIALLY END SEASON 🏁' 
+                      : 'SEASON IN PROGRESS 🔒'}
+                  </button>
+                  {completedCount < fixtureCount && (
+                    <p className="text-[9px] font-bold text-slate-400 mt-2 uppercase tracking-tighter">
+                      Wait for {fixtureCount - completedCount} more matches
+                    </p>
+                  )}
+               </div>
+             )}
+          </div>
+        )}
       </div>
-    </div>
-  );
+    );
+  }
+
+  return null;
 };
 
 export default OverviewTab;

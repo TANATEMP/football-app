@@ -2,62 +2,149 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 
+import api from '../../lib/api';
+import axios from 'axios';
+
 // --- Types ---
-type Position = 'GK' | 'DF' | 'MF' | 'FW';
+type Position = 'GK' | 'DEF' | 'MID' | 'FWD';
 
 interface Player {
   id: string;
   name: string;
   number: number;
   position: Position;
-  matches: number;
-  goals: number;
-  assists: number;
+  stats?: any[];
+}
+
+interface JoinRequest {
+  id: string;
+  message: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+  };
 }
 
 const TeamManagement = () => {
-  // --- State: นักเตะในทีมปัจจุบัน ---
-  const [players, setPlayers] = useState<Player[]>([
-    { id: 'P1', name: 'David De Gea', number: 1, position: 'GK', matches: 5, goals: 0, assists: 0 },
-    { id: 'P2', name: 'Virgil van Dijk', number: 4, position: 'DF', matches: 5, goals: 1, assists: 0 },
-  ]);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<JoinRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [approvingRequest, setApprovingRequest] = useState<JoinRequest | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // --- State: คำขอเข้าร่วมทีมที่รออนุมัติ (Pending Requests) ---
-  const [pendingRequests, setPendingRequests] = useState<Player[]>([
-    { id: 'REQ-1', name: 'John Player', number: 10, position: 'MF', matches: 0, goals: 0, assists: 0 },
-    { id: 'REQ-2', name: 'Darwin Nuñez', number: 9, position: 'FW', matches: 0, goals: 0, assists: 0 }
-  ]);
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const userRes = await api.get('/user');
+      const team = userRes.data.data?.team;
+      if (!team) return;
+      
+      // setMyTeamId(team.id);
 
-  // --- Functions ---
-  const getPositionColor = (pos: Position) => {
+      const [playersRes, reqsRes] = await Promise.all([
+        api.get('/players', { params: { teamId: team.id } }),
+        api.get(`/join-requests/team/${team.id}`),
+      ]);
+
+      console.log(playersRes);
+      console.log(reqsRes);
+      const playersPayload = playersRes.data.data !== undefined ? playersRes.data.data : playersRes.data;
+      const reqsPayload = reqsRes.data.data !== undefined ? reqsRes.data.data : reqsRes.data;
+
+      const playersData = Array.isArray(playersPayload) ? playersPayload : playersPayload?.data || [];
+      const reqsData = Array.isArray(reqsPayload) ? reqsPayload : reqsPayload?.data || [];
+      setPlayers(playersData);
+      setPendingRequests(reqsData);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchData();
+  }, []);
+
+  const getPositionColor = (pos: string) => {
     switch (pos) {
       case 'GK': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-      case 'DF': return 'bg-blue-100 text-blue-800 border-blue-300';
-      case 'MF': return 'bg-green-100 text-green-800 border-green-300';
-      case 'FW': return 'bg-red-100 text-red-800 border-red-300';
+      case 'DEF': return 'bg-blue-100 text-blue-800 border-blue-300';
+      case 'MID': return 'bg-green-100 text-green-800 border-green-300';
+      case 'FWD': return 'bg-red-100 text-red-800 border-red-300';
       default: return 'bg-gray-100 text-gray-800 border-gray-300';
     }
   };
 
-  // 🟢 อนุมัติรับเข้าทีม
-  const handleApprove = (player: Player) => {
-    // 1. ลบออกจากกล่อง Pending
-    setPendingRequests(pendingRequests.filter(req => req.id !== player.id));
-    // 2. ย้ายไปใส่ในตารางนักเตะหลัก
-    setPlayers([...players, player]);
-  };
-
-  // 🔴 ปฏิเสธคำขอ
-  const handleReject = (playerId: string) => {
-    setPendingRequests(pendingRequests.filter(req => req.id !== playerId));
-  };
-
-  // ลบนักเตะออกจากทีม (Release)
-  const handleRemovePlayer = (id: string, name: string) => {
-    if (window.confirm(`คุณต้องการยกเลิกสัญญากับ ${name} ใช่หรือไม่?`)) {
-      setPlayers(players.filter(p => p.id !== id));
+  const handleApprove = async (reqId: string, number: number) => {
+    try {
+      setLoading(true);
+      setErrorMsg(null);
+      await api.patch(`/join-requests/${reqId}/approve`, { number });
+      setApprovingRequest(null);
+      setNewNumber('');
+      await fetchData();
+    } catch (err: any) {
+      console.error('Approval error:', err);
+      // 🔥 Extracting from nested error structure (success: false, error: { message: ... })
+      const data = err.response?.data;
+      const msg = data?.error?.message || data?.message || data?.error || err.message || 'Error occurred';
+      setErrorMsg(Array.isArray(msg) ? msg.join(', ') : typeof msg === 'object' ? JSON.stringify(msg) : msg.toString());
+    } finally {
+      setLoading(false);
     }
   };
+
+  const handleReject = async (reqId: string) => {
+    try {
+      await api.patch(`/join-requests/${reqId}/reject`);
+      await fetchData();
+    } catch (err) {
+      if (axios.isAxiosError(err)) alert(err.response?.data?.message || 'Error occurred');
+    }
+  };
+
+  const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
+  const [newNumber, setNewNumber] = useState<string>('');
+
+  const handleUpdateNumber = async () => {
+    if (!editingPlayer) return;
+    const num = parseInt(newNumber);
+    if (isNaN(num) || num < 1 || num > 99) {
+      alert('โปรดระบุเบอร์เสื้อระหว่าง 1-99');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setErrorMsg(null);
+      await api.patch(`/players/${editingPlayer.id}`, { number: num });
+      setEditingPlayer(null);
+      await fetchData();
+    } catch (err: any) {
+      console.error('Update number error:', err);
+      // 🔥 Extracting from nested error structure (success: false, error: { message: ... })
+      const data = err.response?.data;
+      const msg = data?.error?.message || data?.message || data?.error || err.message || 'Failed to update number';
+      setErrorMsg(Array.isArray(msg) ? msg.join(', ') : typeof msg === 'object' ? JSON.stringify(msg) : msg.toString());
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRemovePlayer = async (id: string, name: string) => {
+    if (window.confirm(`คุณต้องการยกเลิกสัญญากับ ${name} ใช่หรือไม่?`)) {
+      try {
+        await api.delete(`/players/${id}`);
+        await fetchData();
+      } catch (err) {
+        if (axios.isAxiosError(err)) alert(err.response?.data?.message || 'Error occurred');
+      }
+    }
+  };
+
+  if (loading) return <div className="p-10 text-center">Loading...</div>;
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -70,10 +157,12 @@ const TeamManagement = () => {
               <span>&larr;</span> Back to Dashboard
             </Link>
           </div>
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight">Squad Management</h1>
-          <p className="text-gray-500 mt-1">จัดการรายชื่อนักเตะและขุมกำลังของทีมคุณ</p>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Squad Management</h1>
+          <p className="text-slate-500 mt-1">จัดการรายชื่อนักเตะและขุมกำลังของทีมคุณ</p>
         </div>
-        
+        <Link to="/manager/stats" className="bg-slate-900 hover:bg-blue-600 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs italic transition-all shadow-xl active:scale-95 flex items-center gap-2">
+           View Full Analytics <span className="text-lg">📊</span>
+        </Link>
       </div>
 
       {/* 📥 ส่วนคำขอรออนุมัติ (Pending Requests) - จะโชว์แค่ตอนที่มีคนขอมา */}
@@ -90,8 +179,8 @@ const TeamManagement = () => {
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-xl">👦🏻</div>
                   <div>
-                    <h3 className="font-bold text-gray-900">{req.name}</h3>
-                    <p className="text-xs text-gray-500">Prefers: {req.position} | No. {req.number}</p>
+                    <h3 className="font-bold text-gray-900">{req.user.name}</h3>
+                    <p className="text-xs text-gray-500">{req.user.email} {req.message ? `- "${req.message}"` : ''}</p>
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -102,7 +191,11 @@ const TeamManagement = () => {
                     Reject
                   </button>
                   <button 
-                    onClick={() => handleApprove(req)}
+                    onClick={() => {
+                      setApprovingRequest(req);
+                      setNewNumber('');
+                      setErrorMsg(null);
+                    }}
                     className="flex-1 px-3 py-2 bg-green-600 text-white hover:bg-green-700 rounded-md text-sm font-bold shadow-sm transition-colors"
                   >
                     Approve
@@ -131,9 +224,27 @@ const TeamManagement = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 text-sm">
-                {players.sort((a, b) => a.number - b.number).map((player) => (
+                {players.sort((a, b) => (a.number || 999) - (b.number || 999)).map((player) => (
                   <tr key={player.id} className="hover:bg-blue-50/50 transition-colors group">
-                    <td className="p-4 font-black text-gray-400 text-center text-lg">{player.number}</td>
+                    <td className="p-4 text-center">
+                      <div className="relative group/num flex justify-center">
+                        <button 
+                          onClick={() => {
+                            setEditingPlayer(player);
+                            setNewNumber(player.number?.toString() || '');
+                            setErrorMsg(null);
+                          }}
+                          className="relative w-12 h-12 rounded-xl bg-white border-2 border-slate-100 flex flex-col items-center justify-center font-black transition-all hover:border-blue-500 hover:shadow-lg hover:shadow-blue-100 active:scale-95 group-hover:bg-slate-50"
+                        >
+                          <span className={`text-lg ${player.number ? 'text-slate-900' : 'text-slate-300 italic'}`}>
+                            {player.number || '--'}
+                          </span>
+                          <span className="text-[8px] uppercase tracking-tighter text-blue-500 font-bold opacity-0 group-hover/num:opacity-100 transition-opacity">
+                            Edit ✏️
+                          </span>
+                        </button>
+                      </div>
+                    </td>
                     <td className="p-4 font-bold text-gray-900 flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 border border-gray-200">
                         👦🏻
@@ -165,6 +276,108 @@ const TeamManagement = () => {
           </div>
         )}
       </div>
+
+      {/* 🔢 Edit Jersey Number Modal */}
+      {editingPlayer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-sm overflow-hidden border border-slate-100 animate-slide-up">
+            <div className="bg-slate-900 p-6 text-white">
+              <h3 className="text-lg font-black italic uppercase tracking-tight">Assign Jersey No.</h3>
+              <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mt-1">Player: {editingPlayer.name}</p>
+            </div>
+            <div className="p-8 space-y-6">
+              <div className="space-y-4 text-center">
+                <input 
+                  type="number"
+                  min="1"
+                  max="99"
+                  value={newNumber}
+                  onChange={(e) => setNewNumber(e.target.value)}
+                  className="w-24 h-24 text-4xl font-black text-center bg-slate-50 border-2 border-slate-200 rounded-[1.5rem] focus:border-blue-500 focus:ring-4 focus:ring-blue-50 outline-none transition-all"
+                  placeholder="--"
+                  autoFocus
+                />
+                
+                {/* ⚠️ Error Alert */}
+                {errorMsg && (
+                   <div className="bg-red-50 text-red-600 p-3 rounded-xl border border-red-100 flex items-center justify-center gap-2 text-xs font-bold">
+                     <span className="text-sm">⚠️</span> {errorMsg}
+                   </div>
+                )}
+
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">เลือกเบอร์ระหว่าง 1 - 99</p>
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button 
+                  onClick={() => setEditingPlayer(null)}
+                  className="flex-1 py-4 bg-slate-50 text-slate-500 rounded-xl font-black uppercase tracking-widest text-[10px] italic hover:bg-slate-100 transition-all"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleUpdateNumber}
+                  className="flex-1 py-4 bg-slate-900 text-white rounded-xl font-black uppercase tracking-widest text-[10px] italic hover:bg-blue-600 shadow-lg shadow-blue-100 transition-all"
+                >
+                  Submit No.
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🔢 Approve Request & Assign Number Modal */}
+      {approvingRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-sm overflow-hidden border border-slate-100 animate-slide-up">
+            <div className="bg-green-600 p-6 text-white">
+              <h3 className="text-lg font-black italic uppercase tracking-tight">Approve Transfer</h3>
+              <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mt-1">Assign number to: {approvingRequest.user.name}</p>
+            </div>
+            <div className="p-8 space-y-6">
+              <div className="space-y-4 text-center">
+                <input 
+                  type="number"
+                  min="1"
+                  max="99"
+                  value={newNumber}
+                  onChange={(e) => setNewNumber(e.target.value)}
+                  className="w-24 h-24 text-4xl font-black text-center bg-slate-50 border-2 border-slate-200 rounded-[1.5rem] focus:border-green-500 focus:ring-4 focus:ring-green-50 outline-none transition-all"
+                  placeholder="--"
+                  autoFocus
+                />
+
+                {/* ⚠️ Error Alert */}
+                {errorMsg && (
+                   <div className="bg-red-50 text-red-600 p-3 rounded-xl border border-red-100 flex items-center justify-center gap-2 text-xs font-bold">
+                     <span className="text-sm">⚠️</span> {errorMsg}
+                   </div>
+                )}
+
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">กำหนดเบอร์เสื้อ (1 - 99)</p>
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button 
+                  onClick={() => setApprovingRequest(null)}
+                  className="flex-1 py-4 bg-slate-50 text-slate-500 rounded-xl font-black uppercase tracking-widest text-[10px] italic hover:bg-slate-100 transition-all"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => {
+                    const num = parseInt(newNumber);
+                    if (isNaN(num)) return alert('กรุณาระบุเบอร์เสื้อ');
+                    handleApprove(approvingRequest.id, num);
+                  }}
+                  className="flex-1 py-4 bg-green-600 text-white rounded-xl font-black uppercase tracking-widest text-[10px] italic hover:bg-green-700 shadow-lg shadow-green-100 transition-all"
+                >
+                  Sign Player
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

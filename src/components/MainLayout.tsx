@@ -1,6 +1,5 @@
 // src/components/MainLayout.tsx
-import React from "react";
-import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Link, Outlet, useLocation } from "react-router-dom";
 import type { UserRole } from "../types";
 
 interface MainLayoutProps {
@@ -10,7 +9,6 @@ interface MainLayoutProps {
 
 const MainLayout = ({ currentRole, userName = "Guest" }: MainLayoutProps) => {
   const location = useLocation();
-  const navigate = useNavigate();
 
   // 🟢 1. ฟังก์ชันจัดกลุ่มเมนูตาม Role (เอา Home ออกแล้ว)
   const getMenuItems = () => {
@@ -23,13 +21,18 @@ const MainLayout = ({ currentRole, userName = "Guest" }: MainLayoutProps) => {
     if (currentRole === "MANAGER") {
       return [
         { path: "/manager", label: "📋 Manager Dashboard" },
-        { path: "/manager/team", label: "⚙️ My Team" },
+        { path: "/manager/matches", label: "⚽ Fixtures & Results" },
+        { path: "/manager/stats", label: "📊 Squad Stats" },
+        { path: "/manager/team", label: "⚙️ Squad Management" },
       ];
     }
     if (currentRole === "PLAYER") {
       return [
-        { path: "/player", label: "📈 My Stats" },
+        { path: "/player", label: "🏠 My Dashboard" },
+        { path: "/player/matches", label: "⚽ Fixtures & Results" },
+        { path: "/player/standings", label: "🏆 League Table" },
         { path: "/player/team", label: "🛡️ My Team" },
+        { path: "/player/stats", label: "📊 My Stats" },
       ];
     }
 
