@@ -11,7 +11,6 @@ interface User {
   joinedDate?: string;
 }
 
-// กำหนด Interface สำหรับ Modal
 interface ModalConfig {
   isOpen: boolean;
   type: "confirm" | "error";
@@ -26,7 +25,6 @@ const UserManagement: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 🔵 State สำหรับจัดการ ConfirmModal
   const [modal, setModal] = useState<ModalConfig>({
     isOpen: false,
     type: "confirm",
@@ -34,10 +32,8 @@ const UserManagement: React.FC = () => {
     message: "",
   });
 
-  // ฟังก์ชันปิด Modal
   const closeModal = () => setModal((prev) => ({ ...prev, isOpen: false }));
 
-  // 🔵 1. ฟังก์ชันดึงข้อมูลจาก API
   const fetchUsers = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -67,12 +63,10 @@ const UserManagement: React.FC = () => {
     fetchUsers();
   }, [fetchUsers]);
 
-  // 🔵 2. ฟังก์ชันสลับสถานะ
   const toggleStatus = async (id: string, currentStatus: string) => {
     try {
       const newStatus = currentStatus === "ACTIVE" ? "BANNED" : "ACTIVE";
 
-      // Optimistic UI Update
       setUsers((prev) =>
         prev.map((u) =>
           u.id === id ? { ...u, status: newStatus as "ACTIVE" | "BANNED" } : u
@@ -81,7 +75,6 @@ const UserManagement: React.FC = () => {
 
       await api.patch(`/user/${id}/status`, { status: newStatus });
     } catch (err) {
-      // Revert on failure
       fetchUsers();
       if (axios.isAxiosError(err)) {
         setModal({
@@ -95,7 +88,6 @@ const UserManagement: React.FC = () => {
     }
   };
 
-  // 🔵 3. ฟังก์ชันดักก่อนกดสลับสถานะ (เปิด Modal ยืนยัน)
   const handleToggleClick = (user: User) => {
     const isBanning = user.status === "ACTIVE";
     setModal({
@@ -112,7 +104,6 @@ const UserManagement: React.FC = () => {
     });
   };
 
-  // กรองข้อมูล
   const filteredUsers = users.filter(
     (u) =>
       u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -229,7 +220,6 @@ const UserManagement: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <button
-                        // เปลี่ยนไปเรียกใช้ handleToggleClick แทน
                         onClick={() => handleToggleClick(user)}
                         disabled={user.role === "ADMIN"}
                         className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition-all ${
@@ -257,7 +247,6 @@ const UserManagement: React.FC = () => {
         </div>
       )}
 
-      {/* 🔵 ตัว UI ของ ConfirmModal */}
       {modal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl animate-in fade-in zoom-in-95 duration-200">

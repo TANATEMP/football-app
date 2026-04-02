@@ -1,11 +1,9 @@
-// src/pages/manager/ManagerDashboard.tsx
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../lib/api';
 import StandingsTab from '../../components/StandingsTab';
-import ConfirmModal from '../../components/ConfirmModal'; // 🔵 นำเข้า ConfirmModal (ปรับ path ตามจริง)
+import ConfirmModal from '../../components/ConfirmModal';
 
-// --- Improved Types ---
 interface MyTeam {
   id: string;
   name: string;
@@ -23,7 +21,6 @@ interface MyTeam {
   } | null;
 }
 
-// 🔵 กำหนด Interface สำหรับ Modal
 interface ModalState {
   isOpen: boolean;
   title: string;
@@ -40,7 +37,6 @@ const ManagerDashboard = () => {
   const [formData, setFormData] = useState({ name: '', shortName: '' });
   const [finalRank, setFinalRank] = useState<number | null>(null);
 
-  // 🔵 State สำหรับจัดการ Modal
   const [modal, setModal] = useState<ModalState>({
     isOpen: false,
     title: '',
@@ -48,14 +44,12 @@ const ManagerDashboard = () => {
     type: 'INFO',
   });
 
-  // Helper for Rank suffixes (1st, 2nd, 3rd...)
   const getOrdinal = (n: number) => {
     const s = ["th", "st", "nd", "rd"];
     const v = n % 100;
     return n + (s[(v - 20) % 10] || s[v] || s[0]);
   };
 
-  // 1. Fetch My Profile (Including Team & League)
   const fetchProfile = useCallback(async () => {
     try {
       setLoading(true);
@@ -63,7 +57,6 @@ const ManagerDashboard = () => {
       const user = response.data.data;
       if (user.team) {
         setMyTeam(user.team);
-        // Fetch real match data for the team
         const [nextRes, recentRes] = await Promise.all([
           api.get('/matches', { params: { teamId: user.team.id, status: 'SCHEDULED', limit: 1, sort: 'asc' } }),
           api.get('/matches', { params: { teamId: user.team.id, status: 'COMPLETED', limit: 5, sort: 'desc' } })
@@ -75,7 +68,6 @@ const ManagerDashboard = () => {
         setNextMatch((Array.isArray(nextPayload) ? nextPayload : nextPayload.data)?.[0] || null);
         setRecentMatches(Array.isArray(recentPayload) ? recentPayload : recentPayload.data || []);
 
-        // 🏆 If season is over, fetch final standings to get the rank
         if (user.team.league?.status === 'COMPLETED') {
           const standingsRes = await api.get(`/leagues/${user.team.league.id}/standings`);
           const standings = standingsRes.data.data || standingsRes.data;
@@ -101,7 +93,6 @@ const ManagerDashboard = () => {
     fetchProfile();
   }, [fetchProfile]);
 
-  // 🔵 ฟังก์ชันปิด Modal
   const closeModal = () => setModal(prev => ({ ...prev, isOpen: false }));
 
   const handleCreateTeam = async (e: React.FormEvent) => {
@@ -115,7 +106,6 @@ const ManagerDashboard = () => {
       });
       await fetchProfile();
       
-      // 🔵 เปิด Modal แจ้งเตือนเมื่อสร้างทีมสำเร็จ
       setModal({
         isOpen: true,
         title: 'สร้างสโมสรสำเร็จ!',
@@ -159,7 +149,6 @@ const ManagerDashboard = () => {
           </div>
         </div>
 
-        {/* 🔵 ใส่ ConfirmModal ตรงนี้สำหรับการแจ้งเตือนสร้างทีม */}
         <ConfirmModal
           isOpen={modal.isOpen}
           title={modal.title}
@@ -217,16 +206,12 @@ const ManagerDashboard = () => {
     );
   }
 
-  // Active/Completed Dashboard
-  // At this point, we know myTeam.league exists
   const league = myTeam.league;
   const isSeasonOver = league.status === 'COMPLETED';
 
-  // Simplified Dashboard for Completed Seasons
   if (isSeasonOver) {
     return (
       <div className="max-w-2xl mx-auto py-12 px-4 animate-fade-in text-center flex flex-col items-center justify-center">
-        {/* Trophy / Icon section */}
         <div className="relative mb-6">
           <div className="w-24 h-24 bg-amber-400/10 rounded-[2rem] flex items-center justify-center text-4xl relative z-10 animate-pulse border-2 border-amber-400/20 shadow-xl shadow-amber-900/10 transform -rotate-3">🏆</div>
           <div className="absolute inset-0 bg-amber-400 blur-2xl opacity-10 rounded-full"></div>
@@ -240,7 +225,6 @@ const ManagerDashboard = () => {
            </div>
 
            <h1 className="text-2xl font-black text-slate-900 mb-2 italic uppercase tracking-tighter shrink-0">{myTeam.name}</h1>
-           {/* ปรับให้ชื่อลีกใหญ่และชัดขึ้นสำหรับฤดูกาลที่จบไปแล้ว */}
            <p className="text-slate-600 text-sm md:text-base font-black uppercase tracking-widest mb-8 drop-shadow-sm">{myTeam.league.name} • <span className="text-slate-400">Season {myTeam.league.season}</span></p>
            
            <div className="bg-slate-50/80 rounded-3xl p-8 mb-10 border border-slate-100/50">
@@ -256,7 +240,6 @@ const ManagerDashboard = () => {
              <div className="absolute inset-0 bg-white/10 scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-500 rounded-2xl"></div>
            </Link>
            
-           {/* Subtle background decoration */}
            <div className="absolute -right-10 -bottom-10 w-32 h-32 bg-amber-500/5 rounded-full blur-3xl"></div>
         </div>
 
@@ -289,7 +272,6 @@ const ManagerDashboard = () => {
           </div>
           <div>
             <div className="flex flex-wrap items-center gap-3 mb-6">
-              {/* Team Registration Status */}
               <span className={`text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest italic border transition-all ${
                 myTeam.status === 'APPROVED' ? 'bg-emerald-400/20 text-emerald-400 border-emerald-400/30' : 
                 'bg-amber-400/20 text-amber-400 border-amber-400/30 shadow-lg shadow-amber-900/10'
@@ -297,8 +279,6 @@ const ManagerDashboard = () => {
                 {myTeam.status === 'APPROVED' ? '✓ Team Approved' : 
                  '⌛ Pending Registration'}
               </span>
-
-              {/* League Phase Status */}
               <span className={`text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest italic border transition-all ${
                 league.status === 'REGISTRATION' ? 'bg-blue-400/20 text-blue-400 border-blue-400/30' :
                 league.status === 'PRE_SEASON' ? 'bg-purple-400/20 text-purple-400 border-purple-400/30 shadow-lg shadow-purple-900/10' :
@@ -310,8 +290,6 @@ const ManagerDashboard = () => {
                  league.status === 'ONGOING' ? 'ONGOING' :
                  'Tournament Finished'}
               </span>
-
-              {/* ปรับให้ชื่อลีกเด่นขึ้น เป็นป้ายที่สว่างและฟอนต์ใหญ่กว่าเดิม */}
               <span className="bg-gradient-to-r from-blue-500/40 to-indigo-500/40 text-white text-xs font-black px-5 py-2 rounded-full border border-blue-400/50 uppercase tracking-widest italic shadow-xl">
                 {league.name}
               </span>

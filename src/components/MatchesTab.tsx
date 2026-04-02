@@ -1,7 +1,6 @@
-// src/components/MatchesTab.tsx
 import { useState, useEffect, useCallback } from "react";
 import api from "../lib/api";
-import ConfirmModal from "./ConfirmModal"; // 👈 นำเข้า ConfirmModal
+import ConfirmModal from "./ConfirmModal";
 
 interface Team {
   id: string;
@@ -47,13 +46,11 @@ const MatchesTab: React.FC<MatchesTabProps> = ({ leagueId, status: leagueStatus,
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
 
-  // Modal & Event State
   const [editingMatch, setEditingMatch] = useState<Match | null>(null);
   const [homeRoster, setHomeRoster] = useState<Player[]>([]);
   const [awayRoster, setAwayRoster] = useState<Player[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 🔔 เพิ่ม State สำหรับจัดการ ConfirmModal
   const [modalConfig, setModalConfig] = useState<{
     isOpen: boolean;
     title: string;
@@ -62,7 +59,6 @@ const MatchesTab: React.FC<MatchesTabProps> = ({ leagueId, status: leagueStatus,
     onConfirm: () => void;
   } | null>(null);
 
-  // New Event Form State
   const [eventTeamId, setEventTeamId] = useState("");
   const [eventPlayerId, setEventPlayerId] = useState("");
   const [eventAssistPlayerId, setEventAssistPlayerId] = useState("");
@@ -114,29 +110,26 @@ const MatchesTab: React.FC<MatchesTabProps> = ({ leagueId, status: leagueStatus,
   };
 
   const handleAddEvent = async () => {
-    if (!editingMatch || !eventTeamId || isSubmitting) return;
+    if (!editingMatch || !eventTeamId || isSubmitting || editingMatch.status === 'COMPLETED') return;
     try {
       setIsSubmitting(true);
       
-      // 1. Record the primary event (Goal, Card, etc.)
       await api.post(`/matches/${editingMatch.id}/events`, {
-        team_id: eventTeamId,
-        player_id: eventPlayerId || undefined,
+        teamId: eventTeamId,
+        playerId: eventPlayerId || undefined,
         type: eventType,
         minute: Number(eventMinute),
       });
 
-      // 2. If it's a Goal and an Assist player is selected, record the Assist event
       if (eventType === 'GOAL' && eventAssistPlayerId) {
         await api.post(`/matches/${editingMatch.id}/events`, {
-          team_id: eventTeamId,
-          player_id: eventAssistPlayerId,
+          teamId: eventTeamId,
+          playerId: eventAssistPlayerId,
           type: 'ASSIST',
           minute: Number(eventMinute),
         });
       }
-      
-      // Refresh matches
+
       const res = await api.get('/matches', { params: { leagueId, limit: 100 } });
       const payload = res.data.data !== undefined ? res.data.data : res.data;
       const rows = Array.isArray(payload) ? payload : (payload.data || payload.rows || []);
@@ -294,7 +287,6 @@ const MatchesTab: React.FC<MatchesTabProps> = ({ leagueId, status: leagueStatus,
 
               <div className="p-10 max-h-[70vh] overflow-y-auto custom-scrollbar">
                 {editingMatch.status === 'DRAFT' ? (
-                  /* DRAFT MODE UI */
                   <div className="space-y-8">
                     <div className="bg-slate-50 p-8 rounded-[2.5rem] border border-slate-100">
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Scheduled Kick-off</label>
@@ -308,10 +300,8 @@ const MatchesTab: React.FC<MatchesTabProps> = ({ leagueId, status: leagueStatus,
                     </div>
                   </div>
                 ) : (
-                  /* LIVE/REPORTING MODE UI */
                   <div className="space-y-10">
-                    {/* Event Logger Form (Disabled if League is Completed) */}
-                    {leagueStatus !== 'COMPLETED' && (
+                    {leagueStatus !== 'COMPLETED' && editingMatch.status !== 'COMPLETED' && (
                       <div className="bg-slate-50 p-8 rounded-[2.5rem] border border-slate-100 space-y-6">
                         <div className="flex items-center justify-between mb-2">
                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Add Match Event</h4>
@@ -401,7 +391,6 @@ const MatchesTab: React.FC<MatchesTabProps> = ({ leagueId, status: leagueStatus,
                            </div>
                         </div>
 
-                        {/* Conditional Assist Dropdown */}
                         {eventType === 'GOAL' && (
                           <div className="animate-fade-in space-y-2 pt-2 border-t border-slate-100 mt-4">
                             <label className="text-[9px] font-black text-blue-500 uppercase ml-2 italic flex items-center gap-2">
@@ -415,7 +404,7 @@ const MatchesTab: React.FC<MatchesTabProps> = ({ leagueId, status: leagueStatus,
                             >
                               <option value="">No Assist / Solo Goal</option>
                               {(eventTeamId === editingMatch.homeTeam.id ? homeRoster : awayRoster)
-                                .filter(p => p.id !== eventPlayerId) // Can't assist yourself
+                                .filter(p => p.id !== eventPlayerId)
                                 .map(p => (
                                   <option key={p.id} value={p.id}>#{p.number} {p.name}</option>
                                 ))}
@@ -438,7 +427,6 @@ const MatchesTab: React.FC<MatchesTabProps> = ({ leagueId, status: leagueStatus,
                           const assists = allEvents.filter(e => e.eventType === 'ASSIST');
                           const mainEvents = allEvents.filter(e => e.eventType !== 'ASSIST');
                           
-                          // Map assists to goals by minute and team
                           const timeline = mainEvents.map(event => {
                             let assistantName = "";
                             if (event.eventType === 'GOAL') {
@@ -546,7 +534,6 @@ const MatchesTab: React.FC<MatchesTabProps> = ({ leagueId, status: leagueStatus,
         )}
       </div>
 
-      {/* 🛎️ นำ Modal แจ้งเตือนมาวางไว้ที่ระดับนอกสุด */}
       {modalConfig && (
         <ConfirmModal 
           isOpen={modalConfig.isOpen}
@@ -561,8 +548,6 @@ const MatchesTab: React.FC<MatchesTabProps> = ({ leagueId, status: leagueStatus,
     </>
   );
 };
-
-// ---- MatchCard Component ----
 interface MatchCardProps {
   match: Match;
   canEdit: boolean;

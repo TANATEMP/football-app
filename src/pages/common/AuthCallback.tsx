@@ -1,4 +1,3 @@
-// src/pages/common/AuthCallback.tsx
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import api from "../../lib/api";
@@ -28,10 +27,8 @@ const AuthCallback: React.FC<AuthCallbackProps> = ({ setCurrentRole }) => {
       }
 
       try {
-        // 1. Store token
         localStorage.setItem("token", token);
 
-        // 2. Fetch user profile to get role and info
         const profileResponse = await api.get("/user", {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -40,13 +37,10 @@ const AuthCallback: React.FC<AuthCallbackProps> = ({ setCurrentRole }) => {
         const normalizedRole = user.role.toUpperCase() as UserRole;
         user.role = normalizedRole;
 
-        // 3. Store user info
         localStorage.setItem("user", JSON.stringify(user));
 
-        // 4. Update global state
         setCurrentRole(normalizedRole);
 
-        // 5. Redirect based on role
         navigate(`/${normalizedRole.toLowerCase()}`);
       } catch (err) {
         console.error("OAuth Profile Sync Error:", err);
@@ -60,7 +54,6 @@ const AuthCallback: React.FC<AuthCallbackProps> = ({ setCurrentRole }) => {
     handleCallback();
   }, [searchParams, navigate, setCurrentRole]);
 
-  // 🔵 ฟังก์ชันสำหรับปิด Modal และค่อยทำการ Redirect กลับหน้าแรก
   const handleCloseModal = () => {
     setErrorModal({ isOpen: false, message: "" });
     navigate("/");
@@ -75,7 +68,6 @@ const AuthCallback: React.FC<AuthCallbackProps> = ({ setCurrentRole }) => {
         </p>
       </div>
 
-      {/* 🔵 ตัว UI ของ Error Modal */}
       {errorModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl animate-in fade-in zoom-in-95 duration-200">

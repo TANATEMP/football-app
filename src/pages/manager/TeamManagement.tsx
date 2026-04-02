@@ -1,4 +1,3 @@
-// src/pages/manager/TeamManagement.tsx
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -6,7 +5,6 @@ import api from '../../lib/api';
 import axios from 'axios';
 import ConfirmModal from '../../components/ConfirmModal'; 
 
-// --- Types ---
 type Position = 'GK' | 'DEF' | 'MID' | 'FWD';
 
 interface Player {
@@ -26,8 +24,6 @@ interface JoinRequest {
     email: string;
   };
 }
-
-// 🔵 ปรับ ModalState ให้รับเฉพาะค่าที่ ConfirmModal มีจริงๆ
 interface ModalState {
   isOpen: boolean;
   title: string;
@@ -202,7 +198,7 @@ const TeamManagement = () => {
         </div>
       </div>
 
-      {/* 📥 Pending Requests */}
+      {/*Pending Requests */}
       {pendingRequests.length > 0 && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 shadow-sm">
           <h2 className="text-lg font-bold text-yellow-800 mb-4 flex items-center gap-2">
@@ -225,7 +221,7 @@ const TeamManagement = () => {
         </div>
       )}
 
-      {/* 🟢 Squad Table */}
+      {/* Squad Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="p-4 border-b border-gray-100 bg-gray-50">
           <h2 className="text-lg font-bold text-gray-800">Current Squad ({players.length})</h2>
@@ -264,7 +260,7 @@ const TeamManagement = () => {
         </div>
       </div>
 
-      {/* Jersey Number Modals (ส่วนนี้ใช้ UI ในไฟล์นี้เอง ไม่เกี่ยวกับ ConfirmModal) */}
+      {/* Jersey Number Modals */}
       {editingPlayer && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
           <div className="bg-white rounded-[2rem] p-8 w-full max-w-sm text-center">
@@ -297,14 +293,12 @@ const TeamManagement = () => {
         </div>
       )}
 
-      {/* 🔵 จุดสำคัญ: เรียกใช้ ConfirmModal โดยไม่ส่งค่าที่ไม่มีใน Interface */}
       <ConfirmModal
         isOpen={modal.isOpen}
         title={modal.title}
         message={modal.message}
         type={modal.type}
         confirmText={modal.isConfirm ? "ยืนยัน" : "ตกลง"}
-        // ❌ ไม่ส่ง cancelText เพราะ Modal ไม่มี prop นี้
         onConfirm={modal.onConfirm || closeModal}
         onCancel={closeModal}
       />

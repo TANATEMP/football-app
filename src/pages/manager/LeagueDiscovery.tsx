@@ -1,9 +1,8 @@
-// src/pages/manager/LeagueDiscovery.tsx
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import api from '../../lib/api';
-import ConfirmModal from '../../components/ConfirmModal'; // 🔵 นำเข้า ConfirmModal (ปรับ path ตามจริง)
+import ConfirmModal from '../../components/ConfirmModal';
 
 interface League {
   id: string;
@@ -24,7 +23,6 @@ interface League {
   _count: { teams: number };
 }
 
-// กำหนด Interface สำหรับ Modal
 interface ModalState {
   isOpen: boolean;
   title: string;
@@ -41,7 +39,6 @@ const LeagueDiscovery = () => {
   const [myTeam, setMyTeam] = useState<any>(null);
   const navigate = useNavigate();
 
-  // 🔵 State สำหรับจัดการ Modal
   const [modal, setModal] = useState<ModalState>({
     isOpen: false,
     title: '',
@@ -71,7 +68,6 @@ const LeagueDiscovery = () => {
     fetchData();
   }, [fetchData]);
 
-  // 🔵 ปิด Modal ทั่วไป
   const closeModal = () => setModal(prev => ({ ...prev, isOpen: false }));
 
   const handleJoinLeague = async (leagueId: string) => {
@@ -81,7 +77,6 @@ const LeagueDiscovery = () => {
       await api.post(`/teams/${myTeam.id}/join-league`, { leagueId });
       setSelectedLeague(null);
       
-      // 🔵 แสดง Modal แจ้งเตือนเมื่อเข้าร่วมสำเร็จ
       setModal({
         isOpen: true,
         title: 'สำเร็จ!',
@@ -89,7 +84,7 @@ const LeagueDiscovery = () => {
         type: 'SUCCESS',
         onConfirm: () => {
           closeModal();
-          navigate('/manager'); // ค่อย Redirect เมื่อกดตกลง
+          navigate('/manager');
         }
       });
       
@@ -145,7 +140,6 @@ const LeagueDiscovery = () => {
                <h3 className="text-3xl font-black text-slate-900 mb-4 italic uppercase tracking-tighter leading-none group-hover:text-blue-600 transition-colors">{league.name}</h3>
                <p className="text-slate-400 text-xs font-bold uppercase tracking-wide leading-relaxed line-clamp-2 mb-6">{league.description || "Top tier league with elite clubs and professional structure."}</p>
                
-               {/* 🗓️ Match Schedule Summary on Card */}
                <div className="mb-8 space-y-2">
                   <div className="flex items-center gap-3 text-blue-600 font-black uppercase italic text-[10px] tracking-widest">
                      MatchDay: {getDayNames(league.daysOfWeek)}
@@ -174,7 +168,7 @@ const LeagueDiscovery = () => {
         </div>
       )}
 
-      {/* Deep-Dive Modal */}
+      {/* Detail Modal */}
       {selectedLeague && createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={() => setSelectedLeague(null)}></div>
@@ -204,7 +198,7 @@ const LeagueDiscovery = () => {
 
             <div className="p-8 overflow-y-auto max-h-[65vh] space-y-10">
               
-              {/* --- 📝 ส่วนคำอธิบายลีก (Description) --- */}
+              {/*Description*/}
               <div className="space-y-4">
                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] italic flex items-center gap-2">
                   <span className="w-6 h-[1px] bg-slate-200"></span> About This League
@@ -216,9 +210,7 @@ const LeagueDiscovery = () => {
                 </div>
               </div>
 
-              {/* Info Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Logistics */}
                 <div className="space-y-4">
                   <h3 className="text-[9px] font-black text-blue-600 uppercase tracking-[0.3em] italic border-l-2 border-blue-600 pl-3">Schedule</h3>
                   <div className="space-y-2">
@@ -249,7 +241,7 @@ const LeagueDiscovery = () => {
                 </div>
               </div>
 
-              {/* Season Dates Table */}
+              {/* Season Dates*/}
               <div className="pt-6 border-t border-slate-100">
                 <div className="bg-slate-900 text-white p-6 rounded-3xl flex items-center justify-around shadow-xl shadow-slate-200">
                   <div className="text-center">
@@ -284,7 +276,6 @@ const LeagueDiscovery = () => {
         document.body
       )}
 
-      {/* 🔵 เรียกใช้งาน ConfirmModal (Render ที่ระดับล่างสุดของ Component) */}
       <ConfirmModal
         isOpen={modal.isOpen}
         title={modal.title}

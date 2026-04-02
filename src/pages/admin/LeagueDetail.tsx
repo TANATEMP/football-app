@@ -20,7 +20,6 @@ const LeagueDetail = () => {
     try {
       setIsLoading(true);
       const response = await api.get(`/leagues/${id}`);
-      // Backend wraps: { success, data: { ...league, teams: [...] }, meta }
       const league = response.data.data;
       setLeagueData({
         ...league,

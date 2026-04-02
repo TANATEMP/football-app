@@ -41,12 +41,11 @@ const StandingsPage = () => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-10 animate-fade-in pb-20 px-4 mt-6">
-      {/* --- ✨ New Premium Header Section ✨ --- */}
+      {/* Header */}
       <div className="bg-slate-900 rounded-[3rem] p-10 md:p-14 text-white shadow-2xl relative overflow-hidden border border-white/5">
-  {/* คลุมด้วย flex-row และ justify-between เพื่อแยกซ้าย-ขวา */}
   <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-8">
     
-    {/* ฝั่งซ้าย: ข้อมูลลีก */}
+    {/* ข้อมูลลีก */}
     <div className="space-y-4">
       <div className="flex items-center gap-3">
         <span className="px-3 py-1 bg-blue-600 text-[9px] font-black uppercase tracking-[0.2em] rounded-full shadow-lg shadow-blue-900/40">
@@ -70,7 +69,7 @@ const StandingsPage = () => {
       </div>
     </div>
 
-    {/* ฝั่งขวา: จำนวนทีม (ปรับให้ดูพรีเมียมและชัดเจนขึ้น) */}
+    {/* จำนวนทีม */}
     {leagueInfo && (
       <div className="flex flex-wrap items-center gap-4 shrink-0">
         <div className="bg-white/5 backdrop-blur-2xl border border-white/10 px-7 py-5 rounded-[2rem] flex items-center gap-5 group hover:bg-white/10 transition-all duration-300">
@@ -86,8 +85,6 @@ const StandingsPage = () => {
       </div>
     )}
   </div>
-
-  {/* Background Decoration */}
   <div className="absolute -right-20 -top-20 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
 </div>
 

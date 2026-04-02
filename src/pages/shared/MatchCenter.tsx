@@ -1,10 +1,6 @@
 import { useState, useEffect } from "react";
 import api from "../../lib/api";
 
-/**
- * Unified Match Center Component
- * Shared by both Players and Managers for a consistent, compact view of fixtures and results.
- */
 const MatchCenter = () => {
   const [matches, setMatches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -17,12 +13,10 @@ const MatchCenter = () => {
       const user = userRes.data.data || userRes.data;
       setUserRole(user.role);
 
-      // 🎯 Determine the team based on the user role (Data structure still depends on role)
       const team = user.role === "PLAYER" ? user.player?.team : user.team;
       setMyTeam(team);
 
       if (team?.id) {
-        // ✅ โหลดประวัติการแข่ง "ทั้งหมด" ของทีม (เพื่อแสดง Results ย้อนหลังข้ามซีซั่น)
         const params: any = {
           limit: 100,
           teamId: team.id,
@@ -53,22 +47,17 @@ const MatchCenter = () => {
       </div>
     );
 
-  // Sort and filter matches for consistency
   const sortedMatches = [...matches].sort(
     (a, b) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime()
   );
-
-  // ✅ Fixtures: เอาเฉพาะในลีกปัจจุบันของทีมเราเท่านั้น (เพื่อความไม่งงในช่วงรอยต่อลีก)
   const fixtures = sortedMatches.filter(
     (m) =>
       (m.status === "SCHEDULED" || m.status === "LIVE") &&
       m.leagueId === myTeam?.leagueId
   );
 
-  // ✅ Results: เอาทั้งหมดที่เคยเตะมา (Historical Career History)
   const results = sortedMatches.filter((m) => m.status === "COMPLETED").reverse();
 
-  // 🎨 Unified Theme Colors (ใช้เหมือนกันทั้ง Player และ Manager)
   const accentColor = "indigo";
   const upcomingAccent = "orange";
 
@@ -76,7 +65,7 @@ const MatchCenter = () => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-10 animate-fade-in pb-20">
-      {/* Header - Shared Premium Design */}
+      {/* Header */}
       <div className="bg-slate-900 rounded-[2.5rem] p-10 text-white shadow-2xl relative overflow-hidden border border-white/5">
         <h1 className="text-4xl font-black italic uppercase tracking-tighter relative z-10 text-white">
           Match Center ⚽
@@ -88,7 +77,7 @@ const MatchCenter = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-        {/* Upcoming Fixtures Column */}
+        {/* Upcoming Matches */}
         <div className="space-y-6">
           <h3 className={`text-[10px] font-black text-slate-400 uppercase tracking-widest border-l-2 border-${upcomingAccent}-500 pl-3`}>
             Upcoming Matches
@@ -131,7 +120,6 @@ const MatchCenter = () => {
                       </span>
                     </div>
                     
-                    {/* Versus / Meta */}
                     <div className="px-4 text-center">
                       <div className="mb-3">
                         <div className="text-xs md:text-sm font-black uppercase text-slate-800 bg-slate-100 px-3 py-1 rounded-lg whitespace-nowrap">
@@ -171,7 +159,7 @@ const MatchCenter = () => {
           )}
         </div>
 
-        {/* Past Results Column */}
+        {/* Past Results */}
         <div className="space-y-6">
           <h3 className={`text-[10px] font-black text-slate-400 uppercase tracking-widest border-l-2 border-${accentColor}-500 pl-3`}>
             Matches History

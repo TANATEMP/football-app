@@ -1,6 +1,5 @@
-// src/components/CreateLeagueModal.tsx
 import React, { useState, useEffect } from 'react';
-import ConfirmModal from './ConfirmModal'; // 👈 นำเข้า ConfirmModal (แก้ไข Path ให้ตรงกับโปรเจกต์ของคุณ)
+import ConfirmModal from './ConfirmModal';
 
 interface CreateLeagueModalProps {
   onClose: () => void;
@@ -9,19 +8,15 @@ interface CreateLeagueModalProps {
 
 const CreateLeagueModal: React.FC<CreateLeagueModalProps> = ({ onClose, onSubmit }) => {
   const [formData, setFormData] = useState({
-    // identity
     name: '',
     logo: null as File | null,
     description: '',
-    // rules
-    matchFormat: 'SINGLE', // SINGLE, DOUBLE
-    // registration
+    matchFormat: 'SINGLE',
     maxTeams: 10,
     minPlayers: 11,
     maxPlayers: 25,
     regDaysBeforeStart: 7,
-    // schedule defaults
-    daysOfWeek: [6, 0], // Saturday (6), Sunday (0)
+    daysOfWeek: [6, 0],
     startTime: '18:00',
     endTime: '22:00',
     matchDuration: 120,
@@ -30,7 +25,6 @@ const CreateLeagueModal: React.FC<CreateLeagueModalProps> = ({ onClose, onSubmit
     endDate: '',
   });
 
-  // 🔔 1. เพิ่ม State สำหรับคุม Error Modal
   const [modalConfig, setModalConfig] = useState<{
     isOpen: boolean;
     title: string;
@@ -52,7 +46,7 @@ const CreateLeagueModal: React.FC<CreateLeagueModalProps> = ({ onClose, onSubmit
 
   const [suggestedEndDate, setSuggestedEndDate] = useState<string | null>(null);
 
-  // --- Auto-Suggest End Date Logic ---
+  //Auto suggest Enddate
   useEffect(() => {
     if (!formData.startDate || !formData.maxTeams || !formData.daysOfWeek.length) {
       setSuggestedEndDate(null);
@@ -63,7 +57,6 @@ const CreateLeagueModal: React.FC<CreateLeagueModalProps> = ({ onClose, onSubmit
     let rounds = n % 2 === 0 ? n - 1 : n;
     if (formData.matchFormat === 'DOUBLE') rounds *= 2;
     
-    // Simple estimation: 1 round per week as base
     const start = new Date(formData.startDate);
     const suggested = new Date(start);
     suggested.setDate(start.getDate() + (rounds * 7));
@@ -296,7 +289,7 @@ const CreateLeagueModal: React.FC<CreateLeagueModalProps> = ({ onClose, onSubmit
           <div className="p-6 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
             <button type="button" onClick={onClose} className="px-6 py-2.5 font-bold text-slate-400 hover:text-slate-600 transition-colors text-sm uppercase">CANCEL</button>
             <button 
-              type="button" // 👈 เปลี่ยนเป็น type="button" เพื่อให้ปุ่มเรียก handleSubmit เอง ไม่ใช่ผ่าน onSubmit ของฟอร์ม (กันปัญหาตอนกด Enter แล้ว modal ไม่เด้ง)
+              type="button"
               onClick={handleSubmit}
               className="px-10 py-3.5 bg-blue-600 text-white font-black rounded-xl hover:bg-blue-700 shadow-xl shadow-blue-200 transition-all active:scale-95 flex items-center gap-2 text-sm"
             >
@@ -306,7 +299,6 @@ const CreateLeagueModal: React.FC<CreateLeagueModalProps> = ({ onClose, onSubmit
         </div>
       </div>
 
-      {/* 🛎️ 3. นำ Modal แจ้งเตือนมาวางไว้ที่ Root Level ของ Component */}
       {modalConfig && (
         <ConfirmModal 
           isOpen={modalConfig.isOpen}

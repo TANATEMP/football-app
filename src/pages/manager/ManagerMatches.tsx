@@ -14,7 +14,6 @@ const ManagerMatches = () => {
       setMyTeam(team);
       
       if (team?.id) {
-        // ✅ โหลดประวัติการแข่ง "ทั้งหมด" ของทีม (เพื่อแสดง Results ย้อนหลัง)
         const params: any = { 
           limit: 100, 
           teamId: team.id 
@@ -42,23 +41,19 @@ const ManagerMatches = () => {
     </div>
   );
 
-  // Sort and filter matches for consistency
   const sortedMatches = [...matches].sort((a, b) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime());
   
-  // ✅ Fixtures: เอาเฉพาะในลีกปัจจุบันของทีมเราเท่านั้น (เพื่อความไม่งง)
   const fixtures = sortedMatches.filter(m => 
     (m.status === 'SCHEDULED' || m.status === 'LIVE') && 
     m.leagueId === myTeam?.leagueId
   );
   
-  // ✅ Results: เอาทั้งหมดที่เคยเตะมา (Historical History)
   const results = sortedMatches.filter(m => m.status === 'COMPLETED').reverse();
 
   const noLeague = !myTeam?.leagueId || !myTeam?.league || myTeam?.league?.status === 'COMPLETED';
 
   return (
     <div className="max-w-7xl mx-auto space-y-10 animate-fade-in pb-20">
-      {/* Header */}
       <div className="bg-slate-900 rounded-[2.5rem] p-10 text-white shadow-2xl relative overflow-hidden border border-white/5">
         <h1 className="text-4xl font-black italic uppercase tracking-tighter relative z-10 text-blue-400">Match Center ⚽</h1>
         <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] mt-2 relative z-10">
@@ -68,7 +63,6 @@ const ManagerMatches = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-        {/* Fixtures column */}
         <div className="space-y-6">
           <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-l-2 border-blue-500 pl-3">Upcoming Battles</h3>
           {noLeague ? (
@@ -85,7 +79,6 @@ const ManagerMatches = () => {
               
               return (
                 <div key={match.id} className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 group hover:shadow-xl hover:border-blue-200 transition-all duration-500">
-                  {/* ปรับแก้ชื่อลีกให้เด่นขึ้น */}
                   <div className="text-center mb-6">
                     <div className="inline-block bg-blue-50 border border-blue-100 text-blue-600 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm">
                       {match.league?.name}
@@ -109,7 +102,6 @@ const ManagerMatches = () => {
                     </div>
                     
                     <div className="px-4 text-center">
-                      {/* ปรับแก้วันและเวลาให้ใหญ่และชัดเจนขึ้น */}
                       <div className="mb-3">
                         <div className="text-xs md:text-sm font-black uppercase text-slate-800 bg-slate-100 px-3 py-1 rounded-lg whitespace-nowrap">
                           {new Date(match.matchDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}
@@ -147,7 +139,6 @@ const ManagerMatches = () => {
           )}
         </div>
 
-        {/* Results column */}
         <div className="space-y-6">
           <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-l-2 border-indigo-500 pl-3">Historical Logs</h3>
           <div className="space-y-3">
@@ -184,7 +175,6 @@ const ManagerMatches = () => {
                         </div>
                       </div>
                       
-                      {/* ปรับแก้ชื่อลีกและวันเวลาประวัติย้อนหลังให้เด่นและอ่านง่ายขึ้น */}
                       <div className="hidden sm:flex flex-col items-end gap-1 shrink-0 ml-4">
                         <div className="text-[9px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded truncate max-w-[120px]">
                           {match.league?.name}

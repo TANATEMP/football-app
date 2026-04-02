@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import api from '../../lib/api';
 import axios from 'axios';
-import ConfirmModal from '../../components/ConfirmModal'; // 🔵 นำเข้า ConfirmModal
+import ConfirmModal from '../../components/ConfirmModal';
 
-// --- Types ---
 type PlayerStatus = 'ONBOARDING' | 'FREE_AGENT' | 'PENDING' | 'SIGNED';
 
 interface TeamInfo {
@@ -12,7 +11,6 @@ interface TeamInfo {
   managerId: string;
 }
 
-// 🔵 กำหนด Interface สำหรับ Modal State
 interface ModalState {
   isOpen: boolean;
   title: string;
@@ -32,7 +30,6 @@ const PlayerDashboard = () => {
   const [playerProfile, setPlayerProfile] = useState<any>(null);
   const [onboardingForm, setOnboardingForm] = useState({ name: '', position: 'MID' as any });
 
-  // 🔵 State สำหรับควบคุม Modal
   const [modal, setModal] = useState<ModalState>({
     isOpen: false,
     title: '',
@@ -112,7 +109,6 @@ const PlayerDashboard = () => {
 
   const handleCompleteOnboarding = async () => {
     if (!onboardingForm.name || !onboardingForm.position) {
-      // 🔵 แทนที่ alert ด้วย Modal
       setModal({
         isOpen: true,
         title: 'ข้อมูลไม่ครบถ้วน',
@@ -142,7 +138,6 @@ const PlayerDashboard = () => {
   const handleRequestJoin = async (team: TeamInfo) => {
     try {
       await api.post('/join-requests', { teamId: team.id });
-      // 🔵 แทนที่ alert ด้วย Modal
       setModal({
         isOpen: true,
         title: 'ส่งคำขอสำเร็จ',
@@ -181,7 +176,6 @@ const PlayerDashboard = () => {
     </div>
   );
 
-  // 渲染 ONBOARDING
   if (status === 'ONBOARDING') {
     const positions = [
       { id: 'GK', label: 'Goalkeeper', icon: '🧤', desc: 'The last line of defense.' },
@@ -238,7 +232,6 @@ const PlayerDashboard = () => {
           </button>
         </div>
 
-        {/* 🔵 แสดง Modal สำหรับ Onboarding */}
         <ConfirmModal
           isOpen={modal.isOpen}
           title={modal.title}
@@ -252,7 +245,6 @@ const PlayerDashboard = () => {
     );
   }
 
-  // 渲染 FREE AGENT
   if (status === 'FREE_AGENT') {
     const filteredTeams = availableTeams.filter(t => t.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
@@ -286,7 +278,6 @@ const PlayerDashboard = () => {
           </div>
         </div>
 
-        {/* 🔵 แสดง Modal สำหรับ Free Agent */}
         <ConfirmModal
           isOpen={modal.isOpen}
           title={modal.title}
@@ -300,7 +291,6 @@ const PlayerDashboard = () => {
     );
   }
 
-  // 渲染 PENDING
   if (status === 'PENDING') {
     return (
       <div className="max-w-3xl mx-auto pt-10">
@@ -315,7 +305,6 @@ const PlayerDashboard = () => {
     );
   }
 
-  // 渲染 SIGNED
   const sortedMatches = [...matches].sort((a, b) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime());
   const nextMatch = sortedMatches.find(m => m.status === 'SCHEDULED' || m.status === 'LIVE');
   const recentResult = [...sortedMatches].filter(m => m.status === 'COMPLETED').reverse()[0];
@@ -383,7 +372,6 @@ const PlayerDashboard = () => {
         </div>
       </div>
 
-      {/* 🔵 แสดง Modal ทั่วไป (เช่น เมื่อมีการแจ้งเตือน) */}
       <ConfirmModal
         isOpen={modal.isOpen}
         title={modal.title}

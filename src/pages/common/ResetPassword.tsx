@@ -1,4 +1,3 @@
-// src/pages/common/ResetPassword.tsx
 import  { useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -22,7 +21,6 @@ const resetSchema = z.object({
 
 type ResetFormData = z.infer<typeof resetSchema>;
 
-// กำหนด Interface สำหรับ Modal
 interface ModalConfig {
   isOpen: boolean;
   type: "confirm" | "error";
@@ -37,7 +35,6 @@ const ResetPassword = () => {
   const [isSuccess, setIsSuccess] = useState(false);
   const token = searchParams.get("token");
 
-  // 🔵 State สำหรับจัดการ Modal (รองรับทั้ง Confirm และ Error)
   const [modal, setModal] = useState<ModalConfig>({
     isOpen: false,
     type: "confirm",
@@ -55,9 +52,8 @@ const ResetPassword = () => {
 
   const closeModal = () => setModal((prev) => ({ ...prev, isOpen: false }));
 
-// 🔵 ฟังก์ชันส่ง API (จะถูกเรียกเมื่อกดยืนยันใน Modal)
   const executeResetPassword = async (data: ResetFormData) => {
-    closeModal(); // ปิดหน้าต่าง Confirm
+    closeModal();
     try {
       await api.post("/auth/reset-password", {
         token,
@@ -68,13 +64,11 @@ const ResetPassword = () => {
     } catch (err) {
       const error = err as AxiosError<{ message: string | string[] }>;
       
-      // 🔵 จัดการกับ message กรณีที่ API ส่งกลับมาเป็น Array (string[])
       const resMessage = error.response?.data?.message;
       const errorMessage = Array.isArray(resMessage) 
         ? resMessage.join(", ") 
         : resMessage;
 
-      // เปิด Modal อีกครั้งในรูปแบบ Error
       setModal({
         isOpen: true,
         type: "error",
@@ -84,7 +78,6 @@ const ResetPassword = () => {
     }
   };
 
-  // 🔵 ดักการกด Submit Form เพื่อเปิด Confirm Modal ก่อน
   const onSubmit = (data: ResetFormData) => {
     if (!token) {
       setModal({
@@ -191,7 +184,6 @@ const ResetPassword = () => {
         </button>
       </div>
 
-      {/* 🔵 ตัว UI ของ Confirm/Error Modal */}
       {modal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl animate-in fade-in zoom-in-95 duration-200 text-left">

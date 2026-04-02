@@ -1,4 +1,3 @@
-// src/components/OverviewTab.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../lib/api';
 import axios from 'axios';
@@ -65,7 +64,6 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ status, data, onRefresh }) =>
     checkFixtures();
   }, [checkFixtures]);
 
-  // --- Helpers สำหรับเปิด/ปิด Modal ---
   const closeConfirm = () => {
     setConfirmConfig(prev => ({ ...prev, isOpen: false }));
   };
@@ -80,25 +78,23 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ status, data, onRefresh }) =>
     setConfirmConfig({ isOpen: true, title, message, onConfirm, type, confirmText });
   };
 
-  // Helper สำหรับแสดงแจ้งเตือนแทน alert() (กดปุ่มไหนก็ปิด Modal)
   const showAlert = (title: string, message: string, type: 'SUCCESS' | 'DANGER') => {
     setConfirmConfig({
       isOpen: true,
       title,
       message,
-      onConfirm: closeConfirm, // ให้ปุ่ม Confirm ทำหน้าที่แค่ปิด Modal
+      onConfirm: closeConfirm,
       type,
       confirmText: 'ตกลง'
     });
   };
 
-  // --- Functions สำหรับยิง API ---
   const executeCloseRegistration = async () => {
     try {
       setIsSubmitting(true);
       await api.patch(`/leagues/${data.id}/status`, { status: 'PRE_SEASON' });
       onRefresh?.();
-      setIsSubmitting(false); // ปลดล็อกปุ่มก่อนโชว์ Alert
+      setIsSubmitting(false);
       showAlert('สำเร็จ!', 'ปิดรับสมัครและเข้าสู่ช่วง Pre-Season เรียบร้อย', 'SUCCESS');
     } catch (err) {
       setIsSubmitting(false);
@@ -150,7 +146,6 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ status, data, onRefresh }) =>
     }
   };
 
-  // --- Handlers สำหรับปุ่มต่างๆ ---
   const handleCloseRegistration = () => showConfirm(
     'ปิดรับสมัครทีม',
     'คุณต้องการปิดรับสมัครทีม และเข้าสู่ช่วง Pre-Season ใช่หรือไม่?',

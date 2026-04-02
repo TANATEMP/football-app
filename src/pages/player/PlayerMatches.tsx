@@ -34,16 +34,13 @@ const PlayerMatches = () => {
   const team = playerProfile?.team || playerProfile?.player?.team;
   const noLeague = !team?.leagueId || !team?.league || team?.league?.status === 'COMPLETED';
   
-  // Sort and filter matches for consistency
   const sortedMatches = [...matches].sort((a, b) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime());
   
-  // ✅ Fixtures: เอาเฉพาะในลีกปัจจุบันของทีมเราเท่านั้น (เพื่อความไม่งง)
   const fixtures = sortedMatches.filter(m => 
     (m.status === 'SCHEDULED' || m.status === 'LIVE') && 
     m.leagueId === team?.leagueId
   );
   
-  // ✅ Results: เอาทั้งหมดที่เคยเตะมา (Historical History)
   const results = sortedMatches.filter(m => m.status === 'COMPLETED').reverse();
 
   return (
@@ -55,7 +52,6 @@ const PlayerMatches = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-        {/* Fixtures column */}
         <div className="space-y-6">
           <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-l-2 border-orange-500 pl-3">Upcoming Fixtures</h3>
           {noLeague ? (
@@ -98,7 +94,6 @@ const PlayerMatches = () => {
           )}
         </div>
 
-        {/* Results column */}
         <div className="space-y-6">
           <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-l-2 border-indigo-500 pl-3">Past Results</h3>
           <div className="space-y-3">

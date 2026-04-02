@@ -1,5 +1,3 @@
-// src/types/index.ts
-
 export type UserRole = 'ADMIN' | 'MANAGER' | 'PLAYER' | 'VIEWER';
 export type LeagueStatus = 'REGISTRATION' | 'ONGOING' | 'COMPLETED';
 export type TeamStatus = 'PENDING' | 'APPROVED' | 'REJECTED';

@@ -7,7 +7,7 @@ interface LeagueCardProps {
 }
 
 const LeagueCard = ({ league }: LeagueCardProps) => {
-  // ฟังก์ชันสีป้ายสถานะย้ายมาอยู่ที่นี่แทน
+
   const getStatusColor = (status: League['status']) => {
     switch (status) {
       case 'REGISTRATION': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
@@ -31,7 +31,6 @@ const LeagueCard = ({ league }: LeagueCardProps) => {
 
       <div className="p-6 flex-1 bg-gray-50/30 space-y-6">
         {(league.status === 'ONGOING' || league.status === 'COMPLETED') ? (
-          /* Match Progress (For Active/Finished Leagues) */
           <div className="space-y-4 py-2">
             <div className="flex justify-between text-[11px] font-black uppercase tracking-widest italic text-emerald-600">
               <span className="flex items-center gap-2">
@@ -56,7 +55,6 @@ const LeagueCard = ({ league }: LeagueCardProps) => {
             </div>
           </div>
         ) : (
-          /* Application Progress (For Registration / Pre-Season) */
           <>
             <div className="space-y-2">
               <div className="flex justify-between text-[10px] font-black uppercase tracking-widest italic text-slate-400">

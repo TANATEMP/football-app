@@ -1,9 +1,7 @@
-// src/components/TeamsTab.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../lib/api';
-import ConfirmModal from './ConfirmModal'; // 👈 นำเข้า ConfirmModal
+import ConfirmModal from './ConfirmModal';
 
-// กำหนด Interface ให้ตรงกับ Prisma Schema
 interface Team {
   id: string;
   name: string;
@@ -17,7 +15,6 @@ interface TeamsTabProps {
   onRefresh?: () => void;
 }
 
-// 👈 เพิ่ม Interface สำหรับ ConfirmModal
 interface ConfirmState {
   isOpen: boolean;
   title: string;
@@ -30,9 +27,8 @@ interface ConfirmState {
 const TeamsTab: React.FC<TeamsTabProps> = ({ leagueId, maxTeams, onRefresh }) => {
   const [teams, setTeams] = useState<Team[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false); // 👈 State ป้องกันการกดปุ่มซ้ำ
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 👈 State สำหรับควบคุม ConfirmModal
   const [confirmConfig, setConfirmConfig] = useState<ConfirmState>({
     isOpen: false,
     title: '',
@@ -58,7 +54,6 @@ const TeamsTab: React.FC<TeamsTabProps> = ({ leagueId, maxTeams, onRefresh }) =>
     fetchTeams();
   }, [fetchTeams]);
 
-  // --- Helpers สำหรับเปิด/ปิด Modal ---
   const closeConfirm = () => {
     setConfirmConfig(prev => ({ ...prev, isOpen: false }));
   };
@@ -84,7 +79,6 @@ const TeamsTab: React.FC<TeamsTabProps> = ({ leagueId, maxTeams, onRefresh }) =>
     });
   };
 
-  // ✅ ฟังก์ชันอัปเดตสถานะทีม (Accept/Decline)
   const handleUpdateStatus = async (teamId: string, newStatus: 'APPROVED' | 'REJECTED') => {
     try {
       setIsSubmitting(true);
@@ -98,14 +92,13 @@ const TeamsTab: React.FC<TeamsTabProps> = ({ leagueId, maxTeams, onRefresh }) =>
     }
   };
 
-  // ✅ ฟังก์ชันลบทีมออกจากลีก (เรียกเมื่อกดยืนยันใน Modal)
   const executeRemoveTeam = async (teamId: string) => {
     try {
       setIsSubmitting(true);
       await api.post(`/teams/${teamId}/remove-league`);
       fetchTeams();
       onRefresh?.();
-      closeConfirm(); // ปิด Modal เมื่อสำเร็จ
+      closeConfirm();
     } catch (error) {
       setIsSubmitting(false);
       showAlert('เกิดข้อผิดพลาด', 'ไม่สามารถนำทีมออกจากลีกได้', 'DANGER');
@@ -114,7 +107,6 @@ const TeamsTab: React.FC<TeamsTabProps> = ({ leagueId, maxTeams, onRefresh }) =>
     }
   };
 
-  // 👈 เปลี่ยนจาก confirm() มาใช้ showConfirm()
   const confirmRemoveTeam = (teamId: string) => {
     showConfirm(
       'นำทีมออกจากลีก?',
@@ -132,7 +124,7 @@ const TeamsTab: React.FC<TeamsTabProps> = ({ leagueId, maxTeams, onRefresh }) =>
   return (
     <div className="space-y-8">
       
-      {/* 📋 1. ส่วนคำขอที่รอการอนุมัติ (Pending Requests) */}
+      {/*Pending Requests*/}
       {pendingTeams.length > 0 && (
         <section className="bg-amber-50/50 border border-amber-100 rounded-2xl p-6">
           <h3 className="text-amber-700 font-bold mb-4 flex items-center gap-2">
@@ -149,7 +141,7 @@ const TeamsTab: React.FC<TeamsTabProps> = ({ leagueId, maxTeams, onRefresh }) =>
                 <span className="font-bold text-slate-700">{team.name}</span>
                 <div className="flex gap-2">
                   <button 
-                    disabled={isFull || isSubmitting} // 👈 บล็อกปุ่มถ้าระบบกำลังโหลด
+                    disabled={isFull || isSubmitting}
                     onClick={() => handleUpdateStatus(team.id, 'APPROVED')}
                     className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${
                       isFull || isSubmitting
@@ -160,7 +152,7 @@ const TeamsTab: React.FC<TeamsTabProps> = ({ leagueId, maxTeams, onRefresh }) =>
                     Accept
                   </button>
                   <button 
-                    disabled={isSubmitting} // 👈 บล็อกปุ่มถ้าระบบกำลังโหลด
+                    disabled={isSubmitting}
                     onClick={() => handleUpdateStatus(team.id, 'REJECTED')}
                     className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${
                       isSubmitting 
@@ -177,7 +169,7 @@ const TeamsTab: React.FC<TeamsTabProps> = ({ leagueId, maxTeams, onRefresh }) =>
         </section>
       )}
 
-      {/* 🏆 2. รายชื่อทีมที่อนุมัติแล้ว (Approved Teams) */}
+      {/*Approved Teams*/}
       <section>
         <h3 className="text-slate-500 font-bold uppercase text-xs tracking-widest mb-4">
           Approved Teams ({approvedTeams.length})
@@ -196,7 +188,7 @@ const TeamsTab: React.FC<TeamsTabProps> = ({ leagueId, maxTeams, onRefresh }) =>
                   <span className="font-bold text-slate-800 block">{team.name}</span>
                   <button 
                     disabled={isSubmitting}
-                    onClick={() => confirmRemoveTeam(team.id)} // 👈 เรียกใช้งาน Modal แทน confirm()
+                    onClick={() => confirmRemoveTeam(team.id)}
                     className="text-[10px] font-black uppercase tracking-tighter text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-50"
                   >
                     Remove from League &times;
@@ -212,7 +204,6 @@ const TeamsTab: React.FC<TeamsTabProps> = ({ leagueId, maxTeams, onRefresh }) =>
         )}
       </section>
 
-      {/* 👈 Render ConfirmModal */}
       <ConfirmModal 
         isOpen={confirmConfig.isOpen}
         title={confirmConfig.title}

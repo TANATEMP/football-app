@@ -1,14 +1,12 @@
-// src/pages/common/LandingPage.tsx
 import { useState, type FC } from "react";
-import type { UserRole } from "../../types"; // ปรับ path ให้ตรงกับของคุณ
-import AuthModal from "../../components/AuthModal"; // 👈 นำเข้า Modal
+import type { UserRole } from "../../types";
+import AuthModal from "../../components/AuthModal";
 
 interface LandingPageProps {
   setCurrentRole: (role: UserRole) => void;
 }
 
 const LandingPage: FC<LandingPageProps> = ({ setCurrentRole }) => {
-  // State แค่เอาไว้บอกว่า Modal เปิดอยู่ไหม และเป็นโหมดไหน
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalView, setModalView] = useState<"LOGIN" | "REGISTER">("LOGIN");
 
@@ -19,7 +17,6 @@ const LandingPage: FC<LandingPageProps> = ({ setCurrentRole }) => {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans flex flex-col relative">
-      {/* 🟢 Navbar */}
       <nav className="flex justify-between items-center px-6 py-5 max-w-7xl mx-auto w-full">
         <div className="flex items-center gap-2 font-black text-2xl tracking-tighter">
           <span className="text-3xl">⚽</span>
@@ -44,7 +41,6 @@ const LandingPage: FC<LandingPageProps> = ({ setCurrentRole }) => {
         </div>
       </nav>
 
-      {/* 🟢 Hero Section */}
       <main className="flex-grow flex flex-col items-center justify-center px-4 text-center pb-32 max-w-3xl mx-auto">
         <div className="inline-block bg-blue-100 text-blue-700 font-bold px-4 py-1.5 rounded-full text-sm mb-6">
           แพลตฟอร์มสำหรับคอฟุตบอลตัวจริง
@@ -75,10 +71,7 @@ const LandingPage: FC<LandingPageProps> = ({ setCurrentRole }) => {
         </div>
       </main>
 
-      {/* 🔴 เรียกใช้งาน AuthModal ตรงนี้ */}
       <AuthModal
-        // 🛡️ Key ตัวนี้คือหัวใจ: เมื่อ isOpen เปลี่ยน หรือ modalView เปลี่ยน
-        // React จะทำลาย Component เดิมและสร้างใหม่ทันที State ภายในจะถูก Reset เป็นค่าเริ่มต้น
         key={isModalOpen ? `auth-${modalView}` : "closed"}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}

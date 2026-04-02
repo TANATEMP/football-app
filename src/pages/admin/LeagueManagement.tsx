@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { League } from "../../types";
 import LeagueCard from "../../components/LeagueCard";
 import CreateLeagueModal from "../../components/CreateLeagueModal";
-import ConfirmModal from "../../components/ConfirmModal"; // 👈 นำเข้า ConfirmModal
+import ConfirmModal from "../../components/ConfirmModal";
 import api from "../../lib/api";
 import axios from "axios";
 
@@ -11,7 +11,6 @@ const LeagueManagement = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 🔔 1. เพิ่ม State สำหรับจัดการ ConfirmModal
   const [modalConfig, setModalConfig] = useState<{
     isOpen: boolean;
     title: string;
@@ -20,17 +19,15 @@ const LeagueManagement = () => {
     onConfirm: () => void;
   } | null>(null);
 
-  // 📥 ดึงข้อมูล (GET)
   const fetchLeagues = useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await api.get("/leagues");
       console.log(response);
-      
-      // ดึงข้อมูลให้ครอบคลุมทั้งกรณีที่หุ้มด้วย data หรือไม่หุ้ม
+ 
       const payload = response.data.data !== undefined ? response.data.data : response.data;
       const rows = Array.isArray(payload) ? payload : (payload.data || payload.rows || []);
-      // Map Prisma fields → frontend League type
+
       setLeagues(
         rows.map((l: any) => ({
           ...l,
@@ -53,15 +50,14 @@ const LeagueManagement = () => {
     fetchLeagues();
   }, [fetchLeagues]);
 
-  // 📤 ส่งข้อมูลสร้าง (POST)
   const handleCreateLeague = async (formData: any) => {
     try {
       await api.post("/leagues", {
         name: formData.name,
         season: new Date().getFullYear().toString(),
         description: formData.description,
-        start_date: formData.startDate,
-        end_date: formData.endDate,
+        startDate: formData.startDate,
+        endDate: formData.endDate,
         registrationEnd: formData.registrationEnd,
         status: "REGISTRATION",
         maxTeams: formData.maxTeams || 16,
@@ -74,7 +70,6 @@ const LeagueManagement = () => {
       await fetchLeagues();
       setIsModalOpen(false);
       
-      // (Optional) แสดง Modal สำเร็จ
       setModalConfig({
         isOpen: true,
         title: "Success",
@@ -141,7 +136,6 @@ const LeagueManagement = () => {
           </button>
         </div>
 
-        {/* แสดง Loading หรือรายการ League แบ่งตามกลุ่ม */}
         {isLoading ? (
           <div className="text-center py-20 text-gray-500 font-medium animate-pulse">
             กำลังดึงข้อมูลทัวร์นาเมนต์...
@@ -183,7 +177,7 @@ const LeagueManagement = () => {
               </div>
             )}
 
-            {/* 3. Completed Archive */}
+            {/* 3. Completed */}
             {leagues.some(l => l.status === 'COMPLETED') && (
               <div className="space-y-6 pt-10 border-t border-slate-100">
                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] italic border-l-4 border-slate-200 pl-4">
@@ -199,7 +193,6 @@ const LeagueManagement = () => {
           </div>
         )}
 
-        {/* Modal สำหรับสร้าง League */}
         {isModalOpen && (
           <CreateLeagueModal
             onClose={() => setIsModalOpen(false)}
@@ -208,7 +201,6 @@ const LeagueManagement = () => {
         )}
       </div>
 
-      {/* 🛎️ 3. นำ Modal แจ้งเตือนมาวางไว้ที่ Root Level (นอกสุด) ของหน้า */}
       {modalConfig && (
         <ConfirmModal 
           isOpen={modalConfig.isOpen}

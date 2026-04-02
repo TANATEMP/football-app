@@ -1,8 +1,6 @@
-// src/components/shared/StandingsTab.tsx
 import React, { useEffect, useState, useCallback } from 'react';
 import api from '../lib/api';
 
-// --- Improved Standings Type ---
 interface StandingRecord {
   id: string;
   position: number;
@@ -34,7 +32,6 @@ const StandingsTab: React.FC<StandingsTabProps> = ({ leagueId }) => {
     try {
       setLoading(true);
       const response = await api.get(`/leagues/${leagueId}/standings`);
-      // Backend wraps: { success, data: [...] }
       const payload = response.data.data !== undefined ? response.data.data : response.data;
       setStandings(Array.isArray(payload) ? payload : (payload.data || []));
     } catch (err) {

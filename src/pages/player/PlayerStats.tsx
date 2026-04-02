@@ -11,7 +11,6 @@ const PlayerStats = () => {
       const playerProfile = userRes.data.data?.player || userRes.data.player;
       
       if (playerProfile) {
-        // ✅ แก้บั๊ก: ป้องกันกรณีไม่มี stats
         const statsArray = playerProfile.stats || [];
         
         const aggregatedStats = statsArray.reduce((acc: any, curr: any) => ({
@@ -22,10 +21,9 @@ const PlayerStats = () => {
           redCards: acc.redCards + (curr.redCards || 0),
         }), { matches: 0, goals: 0, assists: 0, yellowCards: 0, redCards: 0 });
 
-        // ✅ แก้บั๊ก: ดึง rating มาด้วย (ถ้ามี) และอัปเดต State
         setStats({
           ...aggregatedStats,
-          rating: playerProfile.rating || 'N/A' // สมมติว่าดึง rating จากโปรไฟล์ ถ้าไม่มีให้แสดง N/A
+          rating: playerProfile.rating || 'N/A' 
         });
       }
     } catch (err) {
@@ -41,10 +39,8 @@ const PlayerStats = () => {
 
   if (loading) return <div className="p-10 text-center font-black italic text-slate-400 animate-pulse uppercase tracking-widest">Loading Performance Stats...</div>;
   
-  // ✅ แก้บั๊ก: ป้องกันแอปพังหากโหลดเสร็จแล้วแต่ไม่มีข้อมูล
   if (!stats) return <div className="p-10 text-center font-black italic text-slate-400 uppercase tracking-widest">No Stats Available</div>;
 
-  // ✅ ปรับสมดุล: เพิ่ม 'Matches' เข้ามาเป็นกล่องที่ 6 ทำให้พอดีกับ lg:grid-cols-6
   const statCards = [
     { label: 'Goals', value: stats.goals, icon: '⚽', color: 'green' },
     { label: 'Assists', value: stats.assists, icon: '👟', color: 'purple' },
@@ -60,7 +56,6 @@ const PlayerStats = () => {
         <div className="absolute -right-20 -top-20 w-80 h-80 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none"></div>
       </div>
 
-      {/* ✅ กริดจะแสดงผล: มือถือ 2 คอลัมน์, แท็บเล็ต 3 คอลัมน์, จอใหญ่ 6 คอลัมน์ ซึ่งพอดีเป๊ะกับ 6 กล่อง */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {statCards.map(stat => (
           <div key={stat.label} className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm text-center hover:shadow-xl transition-all hover:-translate-y-1 duration-300">

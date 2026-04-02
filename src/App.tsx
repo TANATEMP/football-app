@@ -1,41 +1,25 @@
 import { useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-
-// 1. นำเข้า Types
 import type { UserRole } from "./types";
-
-// 2. นำเข้า Layout และ Guard
 import MainLayout from "./components/MainLayout.tsx";
 import ProtectedRoute from "./components/ProtectedRoute.tsx";
-
-// 3. นำเข้า Pages (หน้าต่างๆ)
-// -- Common --
 import LandingPage from "./pages/common/LandingPage.tsx";
 import AuthCallback from "./pages/common/AuthCallback.tsx";
 import ResetPassword from "./pages/common/ResetPassword.tsx";
-
-// -- Admin --
 import LeagueManagement from "./pages/admin/LeagueManagement.tsx";
 import LeagueDetail from "./pages/admin/LeagueDetail";
 import UserManagement from "./pages/admin/UserManagement";
-
-// -- Manager --
 import ManagerDashboard from "./pages/manager/ManagerDashboard";
 import TeamManagement from "./pages/manager/TeamManagement";
 import SquadStats from "./pages/manager/SquadStats";
 import LeagueDiscovery from "./pages/manager/LeagueDiscovery";
-
-// -- Shared --
 import MatchCenter from "./pages/shared/MatchCenter";
-
-// // -- Player --
 import PlayerDashboard from "./pages/player/PlayerDashboard";
 import StandingsPage from "./pages/shared/StandingsPage";
 import PlayerRoster from "./pages/player/PlayerRoster";
 import PlayerStats from "./pages/player/PlayerStats";
 
 function App() {
-  // ดึงข้อมูล Role จาก localStorage ถ้ามี (ป้องกันการหลุดตอนกด Refresh)
   const [currentRole, setCurrentRole] = useState<UserRole | null>(() => {
     const saved = localStorage.getItem("user");
     if (saved) {
@@ -47,7 +31,6 @@ function App() {
     return null;
   });
 
-  // ดึงชื่อผู้ใช้จาก localStorage
   const [userName] = useState<string>(() => {
     const saved = localStorage.getItem("user");
     if (saved) {
@@ -62,17 +45,12 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* ==========================================
-            ส่วนที่ 1: หน้าที่ไม่มี Layout (ไม่มีเมนูด้านข้าง)
-            ========================================== */}
-        {/* Public Route - หน้าแรกของเว็บ (ทุกคนเข้าได้) */}
+        {/*ส่วนที่ 1: หน้าที่ไม่มี Layout (ไม่มีเมนูด้านข้าง)*/}
         <Route path="/" element={<LandingPage setCurrentRole={setCurrentRole}/>} />
         <Route path="/auth/callback" element={<AuthCallback setCurrentRole={setCurrentRole}/>} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
-        {/* ==========================================
-            ส่วนที่ 2: หน้าที่มี Layout (มีเมนู Sidebar & Topbar)
-            ========================================== */}
+        {/*ส่วนที่ 2: หน้าที่มี Layout (มีเมนู Sidebar & Topbar)*/}
         <Route
           element={<MainLayout currentRole={currentRole} userName={userName} />}
         >

@@ -4,11 +4,11 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { AxiosError } from "axios";
-import api, { API_URL } from "../lib/api";
+import api from "../lib/api";
 import type { UserRole } from "../types";
-import ConfirmModal from "./ConfirmModal"; // 👈 อย่าลืม Import Modal ที่เราสร้างไว้
+import ConfirmModal from "./ConfirmModal";
+import { useGoogleLogin } from "@react-oauth/google"; // <-- นำเข้า Hook ของ Google
 
-// 🛡️ 1. Validation Schema
 const authSchema = z
   .object({
     name: z
@@ -100,6 +100,61 @@ const AuthModal: React.FC<AuthModalProps> = ({
 
   const regRole = useWatch({ control, name: "role", defaultValue: "PLAYER" });
 
+  // ----------------------------------------------------------------------
+  // การล็อกอินด้วย Google ผ่าน Pop-up (วิธีที่ 2)
+  // ----------------------------------------------------------------------
+  const handleGoogleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      try {
+        const selectedRole = view === "REGISTER" ? regRole : "PLAYER";
+        
+        // 1. ยิง API พร้อม Token ของ Google และ Role ไปที่ Backend
+        const response = await api.post("/auth/google", {
+          accessToken: tokenResponse.access_token,
+          role: selectedRole.toLowerCase()
+        });
+
+        // 2. จัดการ Token และ Profile ที่ได้กลับมาจาก Backend
+        const { accessToken } = response.data.data;
+        localStorage.setItem("token", accessToken);
+
+        const profileResponse = await api.get("/user", {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        
+        const user = profileResponse.data.data;
+        const normalizedRole = user.role.toUpperCase() as UserRole;
+        user.role = normalizedRole;
+
+        localStorage.setItem("user", JSON.stringify(user));
+
+        setCurrentRole(normalizedRole);
+        onClose();
+        navigate(`/${normalizedRole.toLowerCase()}`);
+      } catch (err) {
+        const error = err as AxiosError<{ message: string | string[] }>;
+        const msg = error.response?.data?.message;
+        
+        setModalConfig({
+          isOpen: true,
+          title: "Google Login Failed",
+          message: Array.isArray(msg) ? msg.join("\n") : msg || "ไม่สามารถล็อกอินด้วย Google ได้",
+          type: 'DANGER',
+          onConfirm: () => setModalConfig(null)
+        });
+      }
+    },
+    onError: () => {
+      setModalConfig({
+        isOpen: true,
+        title: "Google Login Failed",
+        message: "การเชื่อมต่อกับ Google ล้มเหลว กรุณาลองใหม่อีกครั้ง",
+        type: 'DANGER',
+        onConfirm: () => setModalConfig(null)
+      });
+    }
+  });
+
   if (!isOpen) return null;
 
   const onSubmit = async (data: AuthFormData) => {
@@ -144,10 +199,6 @@ const AuthModal: React.FC<AuthModalProps> = ({
         onConfirm: () => setModalConfig(null)
       });
     }
-  };
-
-  const handleGoogleLogin = () => {
-    window.location.href = `${API_URL}/auth/google`;
   };
 
   const onForgotPassword = async (data: ForgotFormData) => {
@@ -335,7 +386,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
           </div>
 
           <button
-            onClick={handleGoogleLogin}
+            onClick={() => handleGoogleLogin()}
             className="w-full py-3.5 bg-white border border-slate-100 text-slate-800 rounded-xl font-bold flex items-center justify-center gap-3 hover:bg-slate-50 hover:border-slate-200 transition-all shadow-sm"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -371,7 +422,6 @@ const AuthModal: React.FC<AuthModalProps> = ({
         </div>
       </div>
 
-      {/* 🛎️ นำ Modal แจ้งเตือนมาวางไว้นอกกล่อง AuthModal แต่อยู่ในระดับ Root เพื่อป้องกัน Z-Index ทับซ้อน */}
       {modalConfig && (
         <ConfirmModal 
           isOpen={modalConfig.isOpen}

@@ -24,7 +24,6 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  // กำหนด Theme สีตามประเภทของการแจ้งเตือน
   let bgColor = 'bg-slate-50';
   let icon = 'ℹ️';
   let titleColor = 'text-slate-700';
@@ -44,16 +43,13 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-      {/* Background Overlay (กดพื้นที่ว่างเพื่อปิดได้) */}
       <div 
         className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" 
         onClick={!isSubmitting ? onCancel : undefined}
       ></div>
       
-      {/* Modal Box */}
       <div className="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden border border-slate-100 animate-in fade-in zoom-in duration-200">
         
-        {/* Header Section */}
         <div className={`p-8 text-center ${bgColor}`}>
            <span className="text-4xl mb-4 block leading-none">
              {icon}
@@ -63,14 +59,12 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
            </h3>
         </div>
 
-        {/* Message Section */}
         <div className="p-8 text-center">
           <p className="text-slate-500 font-bold text-xs uppercase tracking-wide leading-relaxed whitespace-pre-line">
             {message}
           </p>
         </div>
 
-        {/* Actions Section */}
         <div className="p-6 pt-0 flex gap-3">
           <button 
             type="button"
@@ -93,7 +87,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
       </div>
     </div>,
-    document.body // 👈 Render ออกไปที่ Body โดยตรง
+    document.body
   );
 };
 

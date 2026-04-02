@@ -1,4 +1,3 @@
-// src/pages/manager/SquadStats.tsx
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../lib/api';

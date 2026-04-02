@@ -61,7 +61,7 @@ const PlayerRoster = () => {
       <div className="bg-white rounded-[2.5rem] p-10 md:p-12 shadow-sm border border-slate-100">
         
 
-        {/* ✅ ย้าย Manager มาไว้ตรงนี้ ก่อนลิสต์เพื่อนร่วมทีม */}
+        {/* Manager */}
         {myTeam?.manager && (
           <div className="mb-10 p-8 rounded-[2rem] border-2 border-blue-100 bg-blue-50/30 flex items-center gap-6 relative overflow-hidden group hover:border-blue-300 hover:shadow-lg transition-all">
             <div className="absolute -right-4 -bottom-6 text-[100px] font-black italic text-blue-600/5 group-hover:text-blue-600/10 group-hover:-translate-y-2 group-hover:scale-110 transition-all duration-500 pointer-events-none select-none z-0">
@@ -75,12 +75,11 @@ const PlayerRoster = () => {
           </div>
         )}
         
-        {/* Teammates Grid */}
+        {/* Teammates*/}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {roster.map(player => (
             <div key={player.id} className={`p-8 rounded-[2rem] border-2 transition-all hover:shadow-2xl relative overflow-hidden group ${player.id === playerProfile?.id ? 'border-blue-600 bg-blue-50/50' : 'border-slate-50 hover:border-blue-100 bg-white'}`}>
               
-              {/* ลายน้ำเบอร์เสื้อ */}
               <div className="absolute -bottom-4 -right-2 text-[100px] font-black italic text-slate-900/5 group-hover:text-blue-500/20 group-hover:-translate-y-2 group-hover:scale-110 transition-all duration-500 pointer-events-none leading-none select-none z-0">
                 {player.number || ''}
               </div>
