@@ -1,5 +1,6 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
 import type { UserRole } from "../types";
+import api from "../lib/api";
 
 interface MainLayoutProps {
   currentRole: UserRole | null;
@@ -83,8 +84,15 @@ const MainLayout = ({ currentRole, userName = "Guest" }: MainLayoutProps) => {
         {currentRole && (
           <div className="p-4 border-t border-blue-800">
             <button
-              onClick={() => {
-                window.location.href = "/";
+              onClick={async () => {
+                try {
+                  await api.post("/auth/logout");
+                } catch (error) {
+                  console.error("Logout failed:", error);
+                } finally {
+                  localStorage.removeItem("user");
+                  window.location.href = "/";
+                }
               }}
               className="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg transition text-sm font-semibold"
             >
