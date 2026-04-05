@@ -13,6 +13,7 @@ import zxcvbn from "zxcvbn";
 const loginSchema = z.object({
   email: z.string().email({ message: "รูปแบบอีเมลไม่ถูกต้อง" }).toLowerCase(),
   password: z.string().min(1, { message: "กรุณากรอกรหัสผ่าน" }),
+  twoFactorCode: z.string().optional(),
 });
 type LoginFormData = z.infer<typeof loginSchema>;
 
@@ -49,7 +50,8 @@ interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialView: "LOGIN" | "REGISTER";
-  setCurrentRole: (role: UserRole) => void;
+  setCurrentRole: (role: UserRole | null) => void;
+  setUserName: (name: string) => void;
 }
 
 const AuthModal: React.FC<AuthModalProps> = ({
@@ -57,12 +59,20 @@ const AuthModal: React.FC<AuthModalProps> = ({
   onClose,
   initialView,
   setCurrentRole,
+  setUserName,
 }) => {
   const navigate = useNavigate();
   const [view, setView] = useState<"LOGIN" | "REGISTER" | "FORGOT_PASSWORD">(
     initialView,
   );
-  const [modalConfig, setModalConfig] = useState<any>(null);
+  const [modalConfig, setModalConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: "SUCCESS" | "DANGER";
+    onConfirm: () => void;
+  } | null>(null);
+  const [requires2FA, setRequires2FA] = useState(false);
 
   const {
     register: registerLogin,
@@ -100,12 +110,20 @@ const AuthModal: React.FC<AuthModalProps> = ({
   const handleAuthSuccess = async () => {
     const profileResponse = await api.get("/user");
 
-    const user = profileResponse.data.data;
-    const normalizedRole = user.role.toUpperCase() as UserRole;
-    user.role = normalizedRole;
+    const rawUser = profileResponse.data.data;
+    const normalizedRole = rawUser.role.toUpperCase() as UserRole;
 
-    localStorage.setItem("user", JSON.stringify(user));
+    // Sanitize: Only store non-sensitive public info
+    const userToSave = {
+      id: rawUser.id,
+      name: rawUser.name,
+      email: rawUser.email,
+      role: normalizedRole,
+    };
+
+    localStorage.setItem("user", JSON.stringify(userToSave));
     setCurrentRole(normalizedRole);
+    setUserName(userToSave.name);
     onClose();
     navigate(`/${normalizedRole.toLowerCase()}`);
   };
@@ -114,15 +132,20 @@ const AuthModal: React.FC<AuthModalProps> = ({
     try {
       await api.post("/auth/login", data);
       await handleAuthSuccess();
-    } catch (err) {
+    } catch (err: any) {
+      if (err.response?.data?.error?.requires2FA || err.response?.data?.requires2FA) {
+        setRequires2FA(true);
+        return;
+      }
       handleError(err, "Login Failed");
     }
   };
 
   const onRegister = async (data: RegisterFormData) => {
     try {
+      const { confirmPassword: _unused, ...registerData } = data;
       await api.post("/auth/register", {
-        ...data,
+        ...registerData,
         role: data.role.toLowerCase(),
       });
       await handleAuthSuccess();
@@ -150,7 +173,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
   };
 
   const handleError = (err: unknown, title: string) => {
-    const error = err as AxiosError<any>;
+    const error = err as AxiosError<{ message?: string | string[] }>;
     let finalMessage =
       error.response?.data?.message || "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง";
     if (Array.isArray(finalMessage)) finalMessage = finalMessage.join("\n");
@@ -167,7 +190,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
   const handleGoogleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
-        const payload: any = { accessToken: tokenResponse.access_token };
+        const payload: { accessToken: string; role?: string } = { accessToken: tokenResponse.access_token };
         if (view === "REGISTER") payload.role = regRole.toLowerCase();
 
         await api.post("/auth/google", payload);
@@ -296,6 +319,22 @@ const AuthModal: React.FC<AuthModalProps> = ({
                 <p className="text-red-500 text-[10px]">
                   {errorsLogin.password.message}
                 </p>
+              )}
+
+              {requires2FA && (
+                <>
+                  <input
+                    {...registerLogin("twoFactorCode")}
+                    placeholder="รหัส 2FA (6 หลัก)"
+                    className={`w-full px-4 py-2.5 bg-slate-50 border rounded-xl border-blue-400`}
+                    maxLength={6}
+                  />
+                  {errorsLogin.twoFactorCode && (
+                    <p className="text-red-500 text-[10px]">
+                      {errorsLogin.twoFactorCode.message}
+                    </p>
+                  )}
+                </>
               )}
 
               <div className="flex justify-end">

@@ -4,10 +4,11 @@ import api from "../../lib/api";
 import type { UserRole } from "../../types";
 
 interface AuthCallbackProps {
-  setCurrentRole: (role: UserRole) => void;
+  setCurrentRole: (role: UserRole | null) => void;
+  setUserName: (name: string) => void;
 }
 
-const AuthCallback: React.FC<AuthCallbackProps> = ({ setCurrentRole }) => {
+const AuthCallback: React.FC<AuthCallbackProps> = ({ setCurrentRole, setUserName }) => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -33,13 +34,21 @@ const AuthCallback: React.FC<AuthCallbackProps> = ({ setCurrentRole }) => {
           headers: { Authorization: `Bearer ${token}` }
         });
         
-        const user = profileResponse.data.data;
-        const normalizedRole = user.role.toUpperCase() as UserRole;
-        user.role = normalizedRole;
+        const rawUser = profileResponse.data.data;
+        const normalizedRole = rawUser.role.toUpperCase() as UserRole;
+        
+        // Sanitize: Only store non-sensitive public info
+        const userToSave = {
+          id: rawUser.id,
+          name: rawUser.name,
+          email: rawUser.email,
+          role: normalizedRole,
+        };
 
-        localStorage.setItem("user", JSON.stringify(user));
+        localStorage.setItem("user", JSON.stringify(userToSave));
 
         setCurrentRole(normalizedRole);
+        setUserName(userToSave.name);
 
         navigate(`/${normalizedRole.toLowerCase()}`);
       } catch (err) {

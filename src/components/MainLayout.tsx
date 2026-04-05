@@ -4,9 +4,10 @@ import type { UserRole } from "../types";
 interface MainLayoutProps {
   currentRole: UserRole | null;
   userName?: string;
+  onLogout?: () => void;
 }
 
-const MainLayout = ({ currentRole, userName = "Guest" }: MainLayoutProps) => {
+const MainLayout = ({ currentRole, userName = "Guest", onLogout }: MainLayoutProps) => {
   const location = useLocation();
 
   const getMenuItems = () => {
@@ -83,9 +84,7 @@ const MainLayout = ({ currentRole, userName = "Guest" }: MainLayoutProps) => {
         {currentRole && (
           <div className="p-4 border-t border-blue-800">
             <button
-              onClick={() => {
-                window.location.href = "/";
-              }}
+              onClick={onLogout}
               className="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg transition text-sm font-semibold"
             >
               Logout
@@ -119,9 +118,9 @@ const MainLayout = ({ currentRole, userName = "Guest" }: MainLayoutProps) => {
               Role: {currentRole || "GUEST"}
             </span>
 
-            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-800 font-bold border-2 border-blue-500">
+            <Link to="/profile" className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-800 font-bold border-2 border-blue-500 hover:opacity-80 transition cursor-pointer" title="Go to Profile">
               {userName.charAt(0).toUpperCase()}
-            </div>
+            </Link>
           </div>
         </header>
 

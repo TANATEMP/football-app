@@ -6,6 +6,7 @@ import ProtectedRoute from "./components/ProtectedRoute.tsx";
 import LandingPage from "./pages/common/LandingPage.tsx";
 import AuthCallback from "./pages/common/AuthCallback.tsx";
 import ResetPassword from "./pages/common/ResetPassword.tsx";
+import ProfilePage from "./pages/shared/ProfilePage";
 import LeagueManagement from "./pages/admin/LeagueManagement.tsx";
 import LeagueDetail from "./pages/admin/LeagueDetail";
 import UserManagement from "./pages/admin/UserManagement";
@@ -25,13 +26,13 @@ function App() {
     if (saved) {
       try {
         const user = JSON.parse(saved);
-        return user.role;
+        return user.role || null;
       } catch (err) {}
     }
     return null;
   });
 
-  const [userName] = useState<string>(() => {
+  const [userName, setUserName] = useState<string>(() => {
     const saved = localStorage.getItem("user");
     if (saved) {
       try {
@@ -42,18 +43,45 @@ function App() {
     return "Guest User";
   });
 
+  const handleLogout = async () => {
+    try {
+      // 1. Call backend logout to invalidate session/token
+      await import("./lib/api").then(m => m.default.post("/auth/logout")).catch(() => {});
+    } finally {
+      // 2. Clear local storage
+      localStorage.removeItem("user");
+      // 3. Reset state
+      setCurrentRole(null);
+      setUserName("Guest User");
+      // 4. Redirect home
+      window.location.href = "/";
+    }
+  };
+
   return (
     <BrowserRouter>
       <Routes>
         {/*ส่วนที่ 1: หน้าที่ไม่มี Layout (ไม่มีเมนูด้านข้าง)*/}
-        <Route path="/" element={<LandingPage setCurrentRole={setCurrentRole}/>} />
-        <Route path="/auth/callback" element={<AuthCallback setCurrentRole={setCurrentRole}/>} />
+        <Route path="/" element={<LandingPage setCurrentRole={setCurrentRole} setUserName={setUserName}/>} />
+        <Route path="/auth/callback" element={<AuthCallback setCurrentRole={setCurrentRole} setUserName={setUserName}/>} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
         {/*ส่วนที่ 2: หน้าที่มี Layout (มีเมนู Sidebar & Topbar)*/}
         <Route
-          element={<MainLayout currentRole={currentRole} userName={userName} />}
+          element={<MainLayout currentRole={currentRole} userName={userName} onLogout={handleLogout} />}
         >
+          {/* --- SHARED PROFILES --- */}
+          <Route
+            element={
+              <ProtectedRoute
+                allowedRoles={["ADMIN", "MANAGER", "PLAYER"]}
+                currentRole={currentRole}
+              />
+            }
+          >
+            <Route path="/profile" element={<ProfilePage />} />
+          </Route>
+
           {/* --- ADMIN Routes --- */}
           <Route
             element={

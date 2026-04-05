@@ -3,10 +3,11 @@ import type { UserRole } from "../../types";
 import AuthModal from "../../components/AuthModal";
 
 interface LandingPageProps {
-  setCurrentRole: (role: UserRole) => void;
+  setCurrentRole: (role: UserRole | null) => void;
+  setUserName: (name: string) => void;
 }
 
-const LandingPage: FC<LandingPageProps> = ({ setCurrentRole }) => {
+const LandingPage: FC<LandingPageProps> = ({ setCurrentRole, setUserName }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalView, setModalView] = useState<"LOGIN" | "REGISTER">("LOGIN");
 
@@ -77,6 +78,7 @@ const LandingPage: FC<LandingPageProps> = ({ setCurrentRole }) => {
         onClose={() => setIsModalOpen(false)}
         initialView={modalView}
         setCurrentRole={setCurrentRole}
+        setUserName={setUserName}
       />
     </div>
   );
